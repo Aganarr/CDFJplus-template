@@ -1,0 +1,10 @@
+_cdfj+_template BACKUPS/
+_RELEASE set of files/
+_zips/
+output/
+*.bin
+*.lst
+*.sym
+*.o
+*.elf
+*.map
