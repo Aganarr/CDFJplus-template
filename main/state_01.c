@@ -37,17 +37,19 @@ void S01_Lower(void)
 
     if (p0_u) // up for sample play from ROM
     {
-        resetWave(0);
-        setNote(0, 1600);
-        setSamplePtr(_sample_steel);
-        sample_size = _sample_steel_size;
+        // resetWave(0);
+        // setNote(0, 1600);
+        // setSamplePtr(rom_samples[0].data);
+        // sample_size = rom_samples[0].size;
+        playRomSample(0, 1600);
     }
 
     if (p0_d) // down for sample play from buffer
     {
-        resetWave(0);
-        setNote(0, 800);
-        setWaveform(0, RAM_SAMPLE);
-        sample_size = sample1_size;
+        // resetWave(0);
+        // setNote(0, 800);
+        // setWaveform(0, RAM_SAMPLE);
+        // sample_size = samples[0].size;
+        playSample(0, 800);
     }
 }

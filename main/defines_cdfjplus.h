@@ -40,7 +40,7 @@ extern void* DDR;
 #define DS13PTR		13
 #define DS14PTR		14
 #define DS15PTR		15
-#define DS16PTR		16`
+#define DS16PTR		16
 #define DS17PTR		17
 #define DS18PTR		18
 #define DS19PTR		19

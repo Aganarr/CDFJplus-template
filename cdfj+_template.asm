@@ -6,7 +6,7 @@
 ;@ 
 ;@ Many thanks to John (johnnywc) for seeding this project
 ;@ to JetSetIlly for helping iron out digital samples
-;@ and Andrew Davie for a bunch of cross platform assistence
+;@ and Andrew Davie for a bunch of cross-platform assistance
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 	PROCESSOR 6502
@@ -63,14 +63,14 @@ DS_SIZE = 0						;auto-generate DS_SIZE and CH_SIZE
 CH_SIZE = 0						;for later use in DD RAM allocation
 	endif
 	if (ROM_SIZE == 64 || ROM_SIZE == 128)
-C_STACK = $40003FDC
-DS_SIZE = 2048
-CH_SIZE = 0
+C_STACK = $40003FDC				;when ROM_SIZE = 64 or 128 RAM increases to 16k
+DS_SIZE = 2048					;allowing room for framework to enable the RAM digital sameple buffer
+CH_SIZE = 0						;but not yet the additional 16 Data Stream channels
 	endif
 	if (ROM_SIZE == 256 || ROM_SIZE == 512)
-C_STACK = $40007FDC
-DS_SIZE = 2048
-CH_SIZE = 192
+C_STACK = $40007FDC				;when ROM_SIZE = 256 or 512 RAM increases to 32k
+DS_SIZE = 2048					;allowing room for framework to enable both the RAM digital sameple buffer
+CH_SIZE = 192					;and the additional 16 Data Stream channels
 	endif
 
 _SND_MODE_TIA		= 0
@@ -87,13 +87,14 @@ _SAVE_KEY_WRITE		= 128
 
 _TV_TYPE_60HZ		= 0
 _TV_TYPE_50HZ		= 1
+_TV_TYPE_SECAM		= 2
 _DETECT_FRAME_COUNT	= 1
 
 UPPER_BLANK_TIMER_60	= 43
 LOWER_BLANK_TIMER_60	= 35
 
 UPPER_BLANK_TIMER_50	= 62
-LOWER_BLANK_TIMER_50	= 74
+LOWER_BLANK_TIMER_50	= 75
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@ User Constants
@@ -130,11 +131,11 @@ sk_count		ds 1		;<SaveKey>	bytes to copy 1-64
 sk_offset		ds 1		;<SaveKey>	start offset into sk_RAM 0-63
 sk_RAM			ds 64		;<SaveKey>
 
-.jump_code_RAM		ds 1		;dedicated area of RAM for bank routine jumping/calling	<FRAMEWORK>
-.jump_code_RAM_t_bank	ds 3		;cmp SelectBankX					<FRAMEWORK>
-.jump_code_RAM_t_r_l	ds 1		;jsr .called_bank_routine				<FRAMEWORK>
-.jump_code_RAM_t_r_h	ds 2		;cmp SelectBank0					<FRAMEWORK>
-.jump_code_RAM_r_bank	ds 3		;rts							<FRAMEWORK>
+jump_code_RAM		ds 1			;dedicated area of RAM for bank routine jumping/calling	<FRAMEWORK>
+jump_code_RAM_t_bank	ds 3		;cmp SelectBankX					<FRAMEWORK>
+jump_code_RAM_t_r_l	ds 1			;jsr .called_bank_routine				<FRAMEWORK>
+jump_code_RAM_t_r_h	ds 2			;cmp SelectBank0					<FRAMEWORK>
+jump_code_RAM_r_bank	ds 3		;rts							<FRAMEWORK>
 
 test_position		ds 1		;only for demonstration of positioning method purposes
 
@@ -183,7 +184,7 @@ _test_data		ds 1 ;;;;;TEMP
 	org $0100
 _waveforms		ds 256			;@@@@@ 256 Bytes: 8 Custom Waveforms (0-7) @@@@@
 
-_digital_sample		ds DS_SIZE		;@@@@@ 2048 Bytes: Digital Sound Sample (on RAM >= 16k) @@@@@
+_digital_sample		ds DS_SIZE		;@@@@@ 2048 Bytes: Digital Sound Sample (ROM_SIZE >= 64) @@@@@
 						;@@@@@ playback access via waveform ID 8 @@@@@
 
 _buffer0		ds 192			;@@@@@ 16x 192 Byte DS Channels @@@@@
@@ -203,7 +204,7 @@ _buffer13		ds 192
 _buffer14		ds 192
 _buffer15		ds 192
 
-_buffer16		ds CH_SIZE		;@@@@@ 16x additional 192 Byte DS Channels (on RAM = 32k) @@@@@
+_buffer16		ds CH_SIZE		;@@@@@ 16x additional 192 Byte DS Channels (ROM_SIZE >= 256) @@@@@
 _buffer17		ds CH_SIZE
 _buffer18		ds CH_SIZE
 _buffer19		ds CH_SIZE
@@ -401,7 +402,7 @@ CURRENT_BANK set $6800
 
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-;@ C-Code
+;@ Bank 7 - when C_START = $7800
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 	org $7800
@@ -414,8 +415,14 @@ CURRENT_BANK set $6800
 	endif
 	endif
 
+;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+;@ C-Code
+;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+; The Makefile creates a temporary 1-byte testarm.bin during the bootstrap pass,
+; then rebuilds this file with the real ARM binary before the final DASM pass.
 C_CODE:
-	INCBIN "main/bin/testarm.bin"
+	INCBIN "main/bin/armcode.bin"
 
 
 
@@ -451,7 +458,7 @@ C_CODE_SIZE = * - C_CODE;
 	org $7ffff
 	ENDIF
 
-	.byte #0
+	.byte #$ff
 
 
     

@@ -23,7 +23,7 @@ const unsigned char waveforms[] __attribute__((aligned(4))) = {
     3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 4, 4, 4, 4, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, // 4- sin
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 5- user waveform 1
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 6- user waveform 2
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 7- user waveform 3
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  // 7- user waveform 3
 };
 #define WAVEFORM_SIZE sizeof(waveforms)
 
@@ -33,7 +33,7 @@ const unsigned char waveforms[] __attribute__((aligned(4))) = {
 unsigned int rand = 10531789;          // 32 bit LFSR random number
 unsigned int frame = 0;                // frame counter
 unsigned short game_state = 0;         // internal ARM game state
-unsigned short sample_size = 0;        // current digital sample size (bytes)
+short sample_size = 0;                 // current digital sample size (bytes)
 bool save_key_detected = false;        // save key present flag
 unsigned char tv_type = _TV_TYPE_60HZ; // detected TV type
 
@@ -48,7 +48,7 @@ unsigned char input_repeat[12] = {7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7};
 unsigned short input_counter[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 unsigned short input_target[12];
 
-/******************************* Framefork Functions *******************************/
+/******************************* Framework Functions *******************************/
 static void Initialize();
 static void UpperVBlank();
 static void LowerVBlank();
@@ -102,11 +102,6 @@ static void Initialize()
 
         MemCopy32((void *)_WAV_BASE, waveforms, WAVEFORM_SIZE / 4); // waveforms to DD memory
 
-        //   example code to copy digital sound sample from ARM ROM array
-        //   into the _digital_sample DD RAM location to then be played using
-        //   setWaveform (0, RAM_SAMPLE);
-        MemCopy32((void *)(_DD_BASE + _digital_sample), sample1, sample1_size / 4);
-
         //  set up demo jump table 1 for kernel_01
         for (int i = 0; i <= 190; i++)
         {
@@ -132,43 +127,43 @@ static void Initialize()
     case _DETECT_FRAME_COUNT + 1:
         TV_detect_timer = T1TC;
 
-#define NTSC_70MHZ (0xb23fa9 * _DETECT_FRAME_COUNT / 10)
-#define PAL_70MHZ (0xb3e40e * _DETECT_FRAME_COUNT / 10)
-#define NTSC_60MHZ (0x98c8da * _DETECT_FRAME_COUNT / 10)
-#define PAL_60MHZ (0x9a30e4 * _DETECT_FRAME_COUNT / 10)
+#define NTSC_70MHZ (1168170 * _DETECT_FRAME_COUNT)
+#define PAL_70MHZ (1178932 * _DETECT_FRAME_COUNT)
+#define NTSC_60MHZ (1001289 * _DETECT_FRAME_COUNT)
+#define PAL_60MHZ (1010506 * _DETECT_FRAME_COUNT)
 
-        static const struct fmt
+        static const struct tv_types
         {
             int freq;
-            unsigned char format;
-        } mapTimeToFormat[] = {{
-                                   NTSC_70MHZ,
-                                   _TV_TYPE_60HZ,
-                               },
-                               {
-                                   PAL_70MHZ,
-                                   _TV_TYPE_50HZ,
-                               },
-                               {
-                                   NTSC_60MHZ,
-                                   _TV_TYPE_60HZ,
-                               },
-                               {
-                                   PAL_60MHZ,
-                                   _TV_TYPE_50HZ,
-                               }};
+            unsigned char fmt;
+        } frameTimes[] = {{
+                              NTSC_70MHZ,
+                              _TV_TYPE_60HZ,
+                          },
+                          {
+                              PAL_70MHZ,
+                              _TV_TYPE_50HZ,
+                          },
+                          {
+                              NTSC_60MHZ,
+                              _TV_TYPE_60HZ,
+                          },
+                          {
+                              PAL_60MHZ,
+                              _TV_TYPE_50HZ,
+                          }};
 
         int max_diff = INT_MAX;
-        for (unsigned int i = 0; i < sizeof(mapTimeToFormat) / sizeof(struct fmt); i++)
+        for (unsigned int i = 0; i < sizeof(frameTimes) / sizeof(struct tv_types); i++)
         {
-            int diff = TV_detect_timer - mapTimeToFormat[i].freq;
+            int diff = TV_detect_timer - frameTimes[i].freq;
             if (diff < 0)
                 diff = -diff;
 
             if (diff < max_diff)
             {
                 max_diff = diff;
-                tv_type = mapTimeToFormat[i].format;
+                tv_type = frameTimes[i].fmt;
             }
         }
 
@@ -339,4 +334,22 @@ void SaveKeyRead(unsigned short address, unsigned char offset, unsigned char cou
     RAM[_save_offset] = offset;
     if (save_key_detected)
         RAM[_save_command] = _SAVE_KEY_READ;
+}
+
+void playSample(unsigned short sample_id, unsigned int pitch)
+{
+    MemCopy32((void *)(_DD_BASE + _digital_sample), samples[sample_id].data, samples[sample_id].size / 4);
+
+    resetWave(0);
+    setNote(0, pitch);
+    setWaveform(0, RAM_SAMPLE);
+    sample_size = samples[sample_id].size;
+}
+
+void playRomSample(unsigned short sample_id, unsigned int pitch)
+{
+    resetWave(0);
+    setNote(0, pitch);
+    setSamplePtr(rom_samples[sample_id].data);
+    sample_size = rom_samples[sample_id].size;
 }

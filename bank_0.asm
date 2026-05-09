@@ -1,31 +1,31 @@
 	org CURRENT_BANK
 	rorg $f000
 
-.BANK0
+BANK_0
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@ These routines put at beginning of each bank so all have access @@@@@@@@@@@@@@@@@@@@@
-.blank_scanlines
+blank_scanlines
 	sta WSYNC
 	dex
-	bne .blank_scanlines			;can use .blank_scanlines in any bank
+	bne blank_scanlines			;can use .blank_scanlines in any bank
 	rts
 
-.blank_scanlines_aud				;can use .blank_scanlines_aud in any bank
+blank_scanlines_aud				;can use .blank_scanlines_aud in any bank
 	sta WSYNC
 	lda #AMPLITUDE
 	sta AUDV0
 	dex
-	bne .blank_scanlines_aud
+	bne blank_scanlines_aud
 	rts
 ;@@@@@@@@@@@@@@@@@@@@@ These routines put at beginning of each bank so all have access @@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@ Code block that gets copied into RAM for bank routine dispatch @@@@@@@@@@@@@@@@@
-.jump_code
+jump_code
 	cmp BANK0
-	jsr .jump_code
+	jsr jump_code
 	cmp BANK0
 	rts
 ;@@@@@@@@@@@@@@@@@ Code block that gets copied into RAM for bank routine dispatch @@@@@@@@@@@@@@@@@
@@ -33,27 +33,27 @@
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Cart Reset @@@@@@@@@@@@@@@@@@@@@@@@@@@@
-.start
+start
 	sei
 	cld
-.clear_stack
-	ldx #$a			; ASL opcode = $0A
+clear_stack
+	ldx #$0a				; ASL opcode = $0A
 	inx
 	txs
 	pha
-	bne .clear_stack+1 
+	bne clear_stack+1 
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@ Software Init @@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-	jsr .read_save_key		;<SaveKey> sets sk_detect with presence of SaveKey
+	jsr read_save_key		;<SaveKey> sets sk_detect with presence of SaveKey
 
 	ldx #9				;@ <FRAMEWORK>
-.loop_init_jump_code			;@
-	lda .jump_code,x		;@ Code needed for bank routine
-	sta .jump_code_RAM,x		;@ dispatch handler
+loop_init_jump_code			;@
+	lda jump_code,x		;@ Code needed for bank routine
+	sta jump_code_RAM,x		;@ dispatch handler
 	dex				;@
-	bpl .loop_init_jump_code	;@
+	bpl loop_init_jump_code	;@
 	inx				;@
 	stx DSPTR			;@
 	stx DSPTR			;@
@@ -68,29 +68,29 @@
 	sta sound_mode			;@
 	sta sound_save			;@
 	tax				;@
-	lda .sound_mode_table,x		;@
+	lda sound_mode_table,x		;@
 	sta SETMODE			;@ set proper sound mode
-	lda .call_fn_table,x		;@
+	lda call_fn_table,x		;@
 	sta call_fn			;@ apply proper function caller
 
 	ldy _DETECT_FRAME_COUNT		;@
-.loop_init_frames			;@
+loop_init_frames			;@
 	lda #%1110			;@
-.vertsync_init				;@
+vertsync_init				;@
 	sta WSYNC			;@ 10 dedicated 262 scanline frames to
 	sta VSYNC			;@ time and detect TV type
 	lsr 				;@
-	bne .vertsync_init		;@
+	bne vertsync_init		;@
 	lda #$ff			;@
 	sta CALLFN			;@
 	ldx #129			;@
-.loop_frame_delay_init			;@
+loop_frame_delay_init			;@
 	sta WSYNC			;@
 	sta WSYNC			;@
 	dex				;@
-	bne .loop_frame_delay_init	;@
+	bne loop_frame_delay_init	;@
 	dey				;@
-	bpl .loop_init_frames		;@
+	bpl loop_init_frames		;@
 					;@
 	lda #DS31DATA			;@
 	sta tv_type			;@
@@ -101,61 +101,61 @@
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Game Loop @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-.main_game_loop
+main_game_loop
 
 	lda sound_mode			; compare this frame's sound mode
 	cmp sound_save			; to last frame's
-	beq .skip_change_modes		;
+	beq skip_change_modes		;
 	sta sound_save			; apply new mode if change
 	tax				; is detected
-	lda .sound_mode_table,x		;
+	lda sound_mode_table,x		;
 	sta SETMODE			;
-	lda .call_fn_table,x		;
+	lda call_fn_table,x		;
 	sta call_fn			;
-.skip_change_modes			;
+skip_change_modes			;
 	tax				; branch to proper frame handler
-	bne .main_game_loop_sampled	; standard TIA or sampled sound
+	bne main_game_loop_sampled	; standard TIA or sampled sound
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Game Loop - Standard Sounds @@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-.main_game_loop_standard
+main_game_loop_standard
 
 ;@@@@@@@@@@@@@@@@@@@@
 	lda #%1110
-.vertsync_std
+vertsync_std
 	sta WSYNC
 	sta VSYNC
 	lsr 
-	bne .vertsync_std
+	bne vertsync_std
 	
 	ldx tv_type
-	lda .upper_vblank_table,x
+	lda upper_vblank_table,x
 	sta TIM64T
 ;@@@@@@@@@@@@@@@@@@@@
 
-	jsr .upper_vblank_ARM
+	jsr upper_vblank_ARM
 
 ;@@@@@@@@@@@@@@@@@@@@
-.wait_vblank_end_std
+wait_vblank_end_std
 	sta WSYNC
 	lda INTIM
-	bne .wait_vblank_end_std
+	bne wait_vblank_end_std
 	sta VBLANK
 ;@@@@@@@@@@@@@@@@@@@@
 
 	ldx kernel
-	jsr .call_bank_routine
+	jsr call_bank_routine
 
 ;@@@@@@@@@@@@@@@@@@@@
 	lda #2
 	sta WSYNC
 	sta VBLANK
 	ldx tv_type
-	lda .lower_vblank_table,x
+	lda lower_vblank_table,x
 	sta TIM64T
 ;@@@@@@@@@@@@@@@@@@@@
 
-	jsr .lower_vblank_ARM
+	jsr lower_vblank_ARM
 
 	lda audc0
 	sta AUDC0
@@ -171,54 +171,54 @@
 	sta AUDV1
 
 ;@@@@@@@@@@@@@@@@@@@@
-.wait_overscan_std
+wait_overscan_std
 	sta WSYNC
 	lda INTIM	
-	bne .wait_overscan_std
+	bne wait_overscan_std
 ;@@@@@@@@@@@@@@@@@@@@
 
-	jmp .main_game_loop
+	jmp main_game_loop
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Game Loop - Standard Sounds @@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Game Loop - Sampled Sounds @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-.main_game_loop_sampled
+main_game_loop_sampled
 
 ;@@@@@@@@@@@@@@@@@@@@
 	ldx #2
 	ldy #3
-.vertsync_samp
+vertsync_samp
 	stx WSYNC
 	stx VSYNC
 	lda #AMPLITUDE
 	sta AUDV0
 	dey
-	bne .vertsync_samp
+	bne vertsync_samp
 	sty WSYNC
 	sty VSYNC
 	lda #AMPLITUDE
 	sta AUDV0
 	
 	ldx tv_type
-	lda .upper_vblank_table,x
+	lda upper_vblank_table,x
 	sta TIM64T
 ;@@@@@@@@@@@@@@@@@@@@
 
-	jsr .upper_vblank_ARM
+	jsr upper_vblank_ARM
 
 ;@@@@@@@@@@@@@@@@@@@@
-.wait_vblank_end_samp
+wait_vblank_end_samp
 	sta WSYNC
 	lda #AMPLITUDE
 	sta AUDV0
 	lda INTIM
-	bne .wait_vblank_end_samp
+	bne wait_vblank_end_samp
 	sta VBLANK
 ;@@@@@@@@@@@@@@@@@@@@
 
 	ldx kernel
-	jsr .call_bank_routine
+	jsr call_bank_routine
 
 ;@@@@@@@@@@@@@@@@@@@@
 	ldx #2
@@ -227,11 +227,11 @@
 	lda #AMPLITUDE
 	sta AUDV0
 	ldx tv_type
-	lda .lower_vblank_table,x
+	lda lower_vblank_table,x
 	sta TIM64T
 ;@@@@@@@@@@@@@@@@@@@@
 
-	jsr .lower_vblank_ARM
+	jsr lower_vblank_ARM
 
 	lda audc1
 	sta AUDC1
@@ -241,15 +241,15 @@
 	sta AUDV1
 
 ;@@@@@@@@@@@@@@@@@@@@
-.wait_overscan_samp
+wait_overscan_samp
 	sta WSYNC
 	lda #AMPLITUDE
 	sta AUDV0
 	lda INTIM	
-	bne .wait_overscan_samp
+	bne wait_overscan_samp
 ;@@@@@@@@@@@@@@@@@@@@
 
-	jmp .main_game_loop
+	jmp main_game_loop
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Game Loop - Sampled Sounds @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
@@ -257,12 +257,12 @@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@ Tables for Frame Dispatch @@@@@@@@@@@@
 
-.sound_mode_table		;for auto-adjust to SETMODE mirror
+sound_mode_table		;for auto-adjust to SETMODE mirror
 	.byte #$00
 	.byte #$f0
 	.byte #$00
 
-.call_fn_table			;for auto-adjust to call_fn mirror
+call_fn_table			;for auto-adjust to call_fn mirror
 	.byte #$ff
 	.byte #$fe
 	.byte #$fe
@@ -275,10 +275,10 @@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@ Tables for VBlank Areas @@@@@@@@@@@@@
 
-.upper_vblank_table
+upper_vblank_table
 	.byte UPPER_BLANK_TIMER_60
 	.byte UPPER_BLANK_TIMER_50
-.lower_vblank_table
+lower_vblank_table
 	.byte LOWER_BLANK_TIMER_60
 	.byte LOWER_BLANK_TIMER_50
 
@@ -289,7 +289,7 @@
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@ Handle Upper VBlank ARM Call @@@@@@@@@@@@@@@@@@@@@@@@
-.upper_vblank_ARM
+upper_vblank_ARM
 
 
 	ldx #<_C_routine
@@ -302,20 +302,20 @@
 	stx CALLFN
 
 	ldx kernel			;after ARM upper VBlank dispatch kernel's prep routine
-	lda .kernel_prep_table_h,x
+	lda kernel_prep_table_h,x
 	pha
-	lda .kernel_prep_table_l,x
+	lda kernel_prep_table_l,x
 	pha
 	rts
 ;@@@@@@@@@@@@@@@@@@@@
 
-.kernel_prep_table_h
-	.byte #>(.k_prep_00-1)
-	.byte #>(.k_prep_01-1)
+kernel_prep_table_h
+	.byte #>(k_prep_00-1)
+	.byte #>(k_prep_01-1)
 
-.kernel_prep_table_l
-	.byte #<(.k_prep_00-1)
-	.byte #<(.k_prep_01-1)
+kernel_prep_table_l
+	.byte #<(k_prep_00-1)
+	.byte #<(k_prep_01-1)
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@ Handle Upper VBlank ARM Call @@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -324,7 +324,7 @@
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@ Handle Lower VBlank ARM Call @@@@@@@@@@@@@@@@@@@@@@@@
-.lower_vblank_ARM
+lower_vblank_ARM
 
 	ldx #<_C_routine
 	stx COLUBK			;clear color registers while X = 0
@@ -367,17 +367,17 @@
 	sta audf1
 
 	lda sk_command			;<SaveKey> block of code
-	bmi .write_to_save_key		;<SaveKey> preforms SaveKey operations one byte at a time each frame
-	bne .read_from_save_key		;<SaveKey> to maintain the screen, sound will be slightly distorted
+	bmi write_to_save_key		;<SaveKey> preforms SaveKey operations one byte at a time each frame
+	bne read_from_save_key		;<SaveKey> to maintain the screen, sound will be slightly distorted
 
 	lda #DS31DATA			;test for new save key operation
-	beq .skip_save_key_operation
+	beq skip_save_key_operation
 	sta sk_command
 	tay
 	lda #DS31DATA
-	beq .acknowledge_save_command	;bail on count = 0
+	beq acknowledge_save_command	;bail on count = 0
 	cmp #65
-	bcs .acknowledge_save_command	;bail on count > 64
+	bcs acknowledge_save_command	;bail on count > 64
 	sta sk_count
 	lda #DS31DATA
 	sta sk_addr_l
@@ -389,21 +389,21 @@
 	clc
 	adc sk_count
 	cmp #65
-	bcs .acknowledge_save_command	;bail on access outside sk_RAM
+	bcs acknowledge_save_command	;bail on access outside sk_RAM
 	tya
-	bpl .read_from_save_key
+	bpl read_from_save_key
 
 	ldx #0
-.loop_DD_to_sk_RAM			;load sk_RAM buffer with data from ARM
+loop_DD_to_sk_RAM			;load sk_RAM buffer with data from ARM
 	lda #DS31DATA
 	sta sk_RAM,x
 	inx
 	cpx #64
-	bne .loop_DD_to_sk_RAM
-	beq .skip_save_key_operation
+	bne loop_DD_to_sk_RAM
+	beq skip_save_key_operation
 
-.read_from_save_key
-	jsr .read_save_key
+read_from_save_key
+	jsr read_save_key
 	ldx #>_save_data
 	stx DSPTR
 	lda #<_save_data		;reads can update DD ARM after each byte
@@ -413,17 +413,17 @@
 	ldx sk_offset
 	lda sk_RAM,x
 	sta DSWRITE
-	jmp .done_savekey_operation
+	jmp done_savekey_operation
 
-.write_to_save_key
-	jsr .write_save_key
+write_to_save_key
+	jsr write_save_key
 
-.done_savekey_operation
+done_savekey_operation
 	inc sk_offset
 	inc sk_addr_l
 	dec sk_count
-	bne .skip_save_key_operation
-.acknowledge_save_command
+	bne skip_save_key_operation
+acknowledge_save_command
 	ldx #0
 	stx sk_command
 	ldx #>_save_command		;X = 0 here, using this for DSWRITE
@@ -432,7 +432,7 @@
 	sty DSPTR			;<SaveKey>
 	stx DSWRITE			;<SaveKey> block of code
 
-.skip_save_key_operation
+skip_save_key_operation
 	rts
 ;@@@@@@@@@@@@@@@@@@@@@@@@ Handle Lower VBlank ARM Call @@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -441,29 +441,29 @@
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@ Cross Bank Routine Handler @@@@@@@@@@@@@@@@@@@@@@@@@
-.call_bank_routine
-	lda .jump_table_target_bank,x
-	sta .jump_code_RAM_t_bank
-.call_bank_routine_sans_bank
-	lda .jump_table_target_routine_l,x
-	sta .jump_code_RAM_t_r_l
-	lda .jump_table_target_routine_h,x
-	sta .jump_code_RAM_t_r_h
-	jmp .jump_code_RAM
+call_bank_routine
+	lda jump_table_target_bank,x
+	sta jump_code_RAM_t_bank
+call_bank_routine_sans_bank
+	lda jump_table_target_routine_l,x
+	sta jump_code_RAM_t_r_l
+	lda jump_table_target_routine_h,x
+	sta jump_code_RAM_t_r_h
+	jmp jump_code_RAM
 ;@@@@@@@@@@@@@@@@@@@@
 
-.jump_table_target_bank			;kernel routines can be located anywhere on any bank
+jump_table_target_bank			;kernel routines can be located anywhere on any bank
 	.byte #BANK1
 	.byte #BANK1
 
-.jump_table_target_routine_l		;each routine gets an entry in the table set
-	.byte #<.kernel_00
-	.byte #<.kernel_01
+jump_table_target_routine_l		;each routine gets an entry in the table set
+	.byte #<kernel_00
+	.byte #<kernel_01
 
-.jump_table_target_routine_h
-ROUTINE_KERNEL_00 = * - .jump_table_target_routine_h	;use this method to create names for manual routine calling
-	.byte #>.kernel_00
-	.byte #>.kernel_01
+jump_table_target_routine_h
+ROUTINE_KERNEL_00 = * - jump_table_target_routine_h	;use this method to create names for manual routine calling
+	.byte #>kernel_00
+	.byte #>kernel_01
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@ Cross Bank Routine Handler @@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -474,20 +474,20 @@ ROUTINE_KERNEL_00 = * - .jump_table_target_routine_h	;use this method to create 
 ;@@@@@@@@@@@@@@@@@@@@ Write Save Key Routine @@@@@@@@@@@@@@@@@@@@@@
 ;@ 1 byte 1310 cycles (17+ scanlines) including call
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-.write_save_key
-	jsr .setup_save_key
-	bcc .noSKfound
+write_save_key
+	jsr setup_save_key
+	bcc noSKfound
 	ldx #1
 	stx sk_detect
 	ldx sk_offset
 	lda sk_RAM,x
-	jsr .i2c_txbyte
-	jsr .i2c_stopwrite
+	jsr i2c_txbyte
+	jsr i2c_stopwrite
 	rts
-.noSKfound
+noSKfound
 	ldx #0
 	stx sk_detect
-.done_save_key
+done_save_key
 	rts
 ;@@@@@@@@@@@@@@@@@@@@ Write Save Key Routine @@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -497,17 +497,17 @@ ROUTINE_KERNEL_00 = * - .jump_table_target_routine_h	;use this method to create 
 ;@@@@@@@@@@@@@@@@@@@@@@ Read Save Key Routine @@@@@@@@@@@@@@@@@@@@@
 ;@ 1 byte 1736 cycles (23 scanlines) including call
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-.read_save_key
-	jsr .setup_save_key
-	bcc .noSKfound
+read_save_key
+	jsr setup_save_key
+	bcc noSKfound
 	ldx #1
 	stx sk_detect
-	jsr .i2c_stopwrite
-	jsr .i2c_startread
+	jsr i2c_stopwrite
+	jsr i2c_startread
 	ldx sk_offset
-	jsr .i2c_rxbyte
+	jsr i2c_rxbyte
 	sta sk_RAM,x
-	jsr .i2c_stopread
+	jsr i2c_stopread
 	rts
 ;@@@@@@@@@@@@@@@@@@@@@@ Read Save Key Routine @@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -515,15 +515,15 @@ ROUTINE_KERNEL_00 = * - .jump_table_target_routine_h	;use this method to create 
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@ .SetupSaveKey Routine @@@@@@@@@@@@@@@@@@@@@@
-.setup_save_key
-	jsr .i2c_startwrite
-	bne .exitSK
+setup_save_key
+	jsr i2c_startwrite
+	bne exitSK
 	clv
 	lda sk_addr_h
-	jsr .i2c_txbyte
+	jsr i2c_txbyte
 	lda sk_addr_l
-	jmp .i2c_txbyte
-.exitSK
+	jmp i2c_txbyte
+exitSK
  	clc
  	rts
 ;@@@@@@@@@@@@@@@@@@@@@ .SetupSaveKey Routine @@@@@@@@@@@@@@@@@@@@@@
@@ -532,21 +532,21 @@ ROUTINE_KERNEL_00 = * - .jump_table_target_routine_h	;use this method to create 
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@ .i2c Routines @@@@@@@@@@@@@@@@@@@@@@@@@@@
-.i2c_startread
+i2c_startread
 	ldy #%10100001
 	.byte $2c
-.i2c_startwrite
+i2c_startwrite
 	ldy #%10100000
 	lda #24
 	sta SWCHA
 	lsr
 	sta SWACNT
 	tya
-.i2c_txbyte
+i2c_txbyte
 	eor #$ff
 	sec
 	rol
-.i2c_txbyteloop
+i2c_txbyteloop
 	tay
 	lda #$0
 	sta SWCHA
@@ -558,17 +558,17 @@ ROUTINE_KERNEL_00 = * - .jump_table_target_routine_h	;use this method to create 
 	sta SWCHA
 	tya
 	asl
-	bne .i2c_txbyteloop
-	beq .i2c_rxbit
-.i2c_rxbyte
-	bvc .i2c_rxskipack
-	jsr .i2c_txack
-.i2c_rxskipack
-	bit .i2c_rxbyte
+	bne i2c_txbyteloop
+	beq i2c_rxbit
+i2c_rxbyte
+	bvc i2c_rxskipack
+	jsr i2c_txack
+i2c_rxskipack
+	bit i2c_rxbyte
 	lda #1
-.i2c_rxbyteloop
+i2c_rxbyteloop
 	tay
-.i2c_rxbit
+i2c_rxbit
 	lda #16
 	sta SWCHA
 	lsr
@@ -581,20 +581,20 @@ ROUTINE_KERNEL_00 = * - .jump_table_target_routine_h	;use this method to create 
 	lsr
 	tya
 	rol
-	bcc .i2c_rxbyteloop
+	bcc i2c_rxbyteloop
 	rts
 
-.i2c_stopread
-	bvc .i2c_stopwrite
+i2c_stopread
+	bvc i2c_stopwrite
 	ldy #$80
-	jsr .i2c_rxbit
-.i2c_stopwrite
-	jsr .i2c_txack
+	jsr i2c_rxbit
+i2c_stopwrite
+	jsr i2c_txack
 	lda #0
 	sta SWACNT
 	rts
 
-.i2c_txack
+i2c_txack
 	lda #0
 	sta SWCHA
 	lda #12
@@ -611,7 +611,7 @@ ROUTINE_KERNEL_00 = * - .jump_table_target_routine_h	;use this method to create 
 
 
 _sample_steel
-	INCBIN "sd2.bin"
+	INCBIN "/main/samples/sd2.bin"
 _sample_steel_size = * - _sample_steel
 
 
@@ -620,32 +620,32 @@ _sample_steel_size = * - _sample_steel
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@ Kernel 00 Prep @@@@@@@@@@@@@@@@@@@@@@@@@
-.k_prep_00
-.k_prep_xx	;[example] kernels can share prep code when setup is identical but display handling differs
+k_prep_00
+k_prep_xx	;[example] kernels can share prep code when setup is identical but display handling differs
 
 	;each kernel also dispatches a "prep" routine to allow for object pre-positioning
 
 	sta WSYNC			;		direct table position method
 	nop				;2		load index with desired position 0-159
 	ldx #72				;2,4		can be immediate value or from a datastream
-	lda .calc_rpfp_table,x		;4,8		load data from .calc_rpfp_table
+	lda calc_rpfp_table,x		;4,8		load data from .calc_rpfp_table
 	sta HMP0			;3,11		apply to HMxx register
 	and #$0f			;2,13		mask low nybble
 	tax				;2,15		to index register
-.loop_position_p0			;
+loop_position_p0			;
 	dex				;2,17		dex register for loop
-	bpl .loop_position_p0		;2,19		on negative fall through
+	bpl loop_position_p0		;2,19		on negative fall through
 	sta RESP0			;3,22  		on smallest loop - RESxx register must fall on cycle 22
 
 	sta WSYNC
 	ldx test_position		;3		when in need to use a variable
-	lda .calc_rpfp_table,x		;4,7
+	lda calc_rpfp_table,x		;4,7
 	sta HMP1			;3,10
 	and #$0f			;2,12
 	tax				;2,14
-.loop_position_p1
+loop_position_p1
 	dex				;2,16
-	bpl .loop_position_p1		;2,18
+	bpl loop_position_p1		;2,18
 	sta.w RESP1			;4,22		use sta.w to use that extra cycle
 
 	sta WSYNC
@@ -660,10 +660,10 @@ _sample_steel_size = * - _sample_steel
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@ Kernel 01 Prep @@@@@@@@@@@@@@@@@@@@@@@@@
-.k_prep_01
+k_prep_01
 
 	ldx test_position		;3		position in index and
-	lda .calc_rpfp_table,x		;4		table read must come before the WSYNC
+	lda calc_rpfp_table,x		;4		table read must come before the WSYNC
 
 	sta WSYNC
 	sta HMP1			;3
@@ -672,9 +672,9 @@ _sample_steel_size = * - _sample_steel
 	lda #AMPLITUDE			;2,9		positioning method while using
 	sta AUDV0			;3,12		wave sound
 	sta $2d				;3,15
-.loop_position_p1_2			;
+loop_position_p1_2			;
 	dex				;2,17
-	bpl .loop_position_p1_2		;2,19
+	bpl loop_position_p1_2		;2,19
 	sta RESP1			;3,22
 
 	sta WSYNC
@@ -699,7 +699,7 @@ _sample_steel_size = * - _sample_steel
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@ Positioning Table @@@@@@@@@@@@@@@@@@@@@@@@
 
-.calc_rpfp_table		;RoughPosition/FinePosition table for position method [22]
+calc_rpfp_table		;RoughPosition/FinePosition table for position method [22]
 	.byte #%00110000
 	.byte #%00100000
 	.byte #%00010000
@@ -878,7 +878,7 @@ _sample_steel_size = * - _sample_steel
 
 
 
-BANK0_CODE_SIZE = * - .BANK0;
+BANK0_CODE_SIZE = * - BANK_0;
 	echo "---- BANK0", BANK0_CODE_SIZE, "bytes"
 	echo "---- BANK0", ($fff0 - *), "bytes free"
 
@@ -890,7 +890,7 @@ BANK0_CODE_SIZE = * - .BANK0;
 	DC.B 0, 0, 0, 0		;CDFJ Hotspots
 	DC.L C_STACK		;$F4	C Stack
 	DC.L C_CODE+1		;$F8	C Code (+1 for THUMB Mode)
-	DC.W .start		;$FC	Reset
-	DC.W .start		;$FE	BRK
+	DC.W start		;$FC	Reset
+	DC.W start		;$FE	BRK
 
 

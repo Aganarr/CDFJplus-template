@@ -3,8 +3,20 @@
 
 #include "main.h"
 
-extern const unsigned char sample1[];
-extern const unsigned int sample1_size;
+typedef struct
+{
+    const unsigned char *data;
+    unsigned short size;
+} Sample;
 
+extern const Sample samples[];
+
+typedef struct
+{
+    unsigned short data;
+    short size;
+} RomSample;
+
+extern const RomSample rom_samples[];
 
 #endif

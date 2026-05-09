@@ -32,12 +32,16 @@
 #endif
 
 
+/******************************* Structures *******************************/
+
+
+
 /******************************* Variables *******************************/
 // stay ARM-side
 extern unsigned int rand;                   // 32 bit LFSR random number
 extern unsigned int frame;                  // frame counter
 extern unsigned short game_state;           // internal ARM game state
-extern unsigned short sample_size;          // current digital sample size (bytes)
+extern short sample_size;                   // current digital sample size (bytes)
 extern bool save_key_detected;              // save key present flag
 extern unsigned char tv_type;               // detected TV type
 
@@ -103,11 +107,23 @@ extern unsigned char input_repeat[12];
 extern unsigned short input_counter[12];
 extern unsigned short input_target[12];
 
+
+// Any additional shared user variables here
+
+
+
 /******************************* Framefork Functions *******************************/
 void SaveKeyWrite(unsigned short address, unsigned char offset, unsigned char count);
 void SaveKeyRead(unsigned short address, unsigned char offset, unsigned char count);
 
 void SilenceWaves();
 void SilenceTIA();
+
+void playSample (unsigned short sample_id, unsigned int pitch);
+void playRomSample (unsigned short sample_id, unsigned int pitch);
+
+/******************************* Shared User Functions *******************************/
+
+
 
 #endif
