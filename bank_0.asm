@@ -453,8 +453,8 @@ call_bank_routine_sans_bank
 ;@@@@@@@@@@@@@@@@@@@@
 
 jump_table_target_bank			;kernel routines can be located anywhere on any bank
-	.byte #BANK1
-	.byte #BANK1
+	.byte #<BANK1
+	.byte #<BANK1
 
 jump_table_target_routine_l		;each routine gets an entry in the table set
 	.byte #<kernel_00
