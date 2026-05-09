@@ -149,6 +149,7 @@ CFLAGS += -Wall -ffunction-sections
 CFLAGS += $(OPTIMIZATION) $(INCLUDES)
 CFLAGS += -Wl,--build-id=none
 CFLAGS += -Wno-unused-function
+CFLAGS += -g3 -gdwarf-4 -gstrict-dwarf
 
 # Search path
 VPATH += $(BASE):$(SRC)
@@ -315,7 +316,7 @@ gopher: rom
 		echo "Install Gopher2600 or set GOPHER to the correct path."; \
 		exit 1; \
 	fi
-	$(GOPHER) $(GOPHER_ARGS) "$(OUTPUT)/$(SOURCE).bin"
+	$(GOPHER) $(GOPHER_ARGS) -dwarf "$(CUSTOMELF)" "$(OUTPUT)/$(SOURCE).bin"
 
 # -----------------------------------------------------------------------------
 # Tool builds
