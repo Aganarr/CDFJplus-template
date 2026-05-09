@@ -56,6 +56,7 @@ BASE   = main
 SRC    = $(BASE)/custom
 BIN    = $(BASE)/bin
 OUTPUT = ./output
+BUILD  = ./build
 
 EXEEXT =
 ifeq ($(OS),Windows_NT)
@@ -84,12 +85,25 @@ VPATH += $(BASE):$(SRC)
 
 # ARM/C output
 CUSTOMNAME    = testarm
-CUSTOMELF     = $(BIN)/$(CUSTOMNAME).elf
+CUSTOMELF     = $(BUILD)/$(CUSTOMNAME).elf
 CUSTOMBIN     = $(BIN)/$(CUSTOMNAME).bin
-CUSTOMMAP     = $(BIN)/$(CUSTOMNAME).map
-CUSTOMLST     = $(BIN)/$(CUSTOMNAME).lst
+CUSTOMMAP     = $(BUILD)/$(CUSTOMNAME).map
+CUSTOMLST     = $(BUILD)/$(CUSTOMNAME).lst
 CUSTOMLINK    = $(SRC)/custom.boot.lds
-CUSTOMOBJS    = custom.o main.o ASM_routines.o
+SRCS = \
+	$(SRC)/custom.S \
+	$(BASE)/main.c \
+	$(BASE)/defines_cdfjplus.c \
+	ASM_routines.s \
+	$(BASE)/samples.c \
+	$(BASE)/state_00.c \
+	$(BASE)/state_01.c \
+	$(BASE)/state_02.c 
+
+
+CUSTOMOBJS = $(addprefix $(BUILD)/,$(notdir $(SRCS:.c=.o)))
+CUSTOMOBJS := $(CUSTOMOBJS:.s=.o)
+CUSTOMOBJS := $(CUSTOMOBJS:.S=.o)
 CUSTOMTARGETS = $(CUSTOMELF) $(CUSTOMBIN)
 
 .PHONY: default all prep bootstrap_defines arm final testrom testrom_atari testrom_list \
@@ -109,7 +123,7 @@ testrom: check-tools prep bootstrap_defines arm final
 # ARM binary so the first DASM pass can satisfy the INCBIN line.
 prep: $(CSTART_EXE)
 	@echo "== Stage 1: prep =="
-	mkdir -p $(BIN) $(OUTPUT)
+	mkdir -p $(BIN) $(OUTPUT) $(BUILD)
 	./$(CSTART_EXE) ./$(SOURCE).asm $(SRC)/custom.boot.lds || (echo "!!! C_START FAILED !!!" && exit 1)
 	@if [ ! -f "$(CUSTOMBIN)" ]; then \
 		echo "Creating temporary bootstrap $(CUSTOMBIN)"; \
@@ -147,8 +161,16 @@ arm: $(BASE)/$(DASM_TO_C)
 	@echo "== Stage 3: arm =="
 	$(MAKE) $(CUSTOMTARGETS) || (echo "!!! ARM BUILD FAILED !!!" && exit 1)
 
-main.o: $(BASE)/$(DASM_TO_C)
-ASM_routines.o: ASM_routines.s
+$(BUILD)/main.o: $(BASE)/$(DASM_TO_C)
+$(BUILD)/defines_cdfjplus.o: $(BASE)/$(DASM_TO_C)
+
+$(BUILD)/%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD)/%.o: %.s
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD)/%.o: %.S
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(CUSTOMELF): $(CUSTOMOBJS) Makefile $(CUSTOMLINK)
@@ -209,7 +231,7 @@ tools: cstart wavtool
 # Clean targets
 # -----------------------------------------------------------------------------
 clean:
-	rm -f *.o *.i $(CUSTOMTARGETS) $(BIN)/*.* $(OUTPUT)/*.* $(BASE)/$(DASM_TO_C)
+	rm -f $(BUILD)/*.* $(CUSTOMTARGETS) $(BIN)/*.* $(OUTPUT)/*.* $(BASE)/$(DASM_TO_C)
 
 # Keeps tools, removes all generated project files.
 distclean: clean

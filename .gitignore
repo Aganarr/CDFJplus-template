@@ -1,10 +1,19 @@
 _cdfj+_template BACKUPS/
 _RELEASE set of files/
 _zips/
+
+.vscode/
+
+build/
 output/
+
 *.bin
 *.lst
 *.sym
 *.o
 *.elf
 *.map
+
+main/bin/
+
+*.exe

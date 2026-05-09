@@ -1,0 +1,53 @@
+// Each game state's .c file must also be placed
+// into the SRC= of makefile
+
+// Each state must include its own .h file
+#include "state_01.h"
+
+/**************************** State 01 ****************************/
+// test game state 01 - digital sample sound mode
+void S01_Upper(void)
+{
+    RAM[_buffer0] -= 1;
+    for (int i = 1; i <= 191; i++)
+    {
+        RAM[_buffer0 + i] = RAM[_buffer0 + i - 1] - 1;
+    }
+    setPointer(DS0PTR, _buffer0);
+    setPointer(DSJMP1PTR, _jump_table_1);
+}
+
+void S01_Lower(void)
+{
+    if (p0_l) // left to change to TIA sound mode
+    {
+        game_state = 0;
+        kernel = 0;
+        sound_mode = _SND_MODE_TIA;
+        SilenceWaves();
+    }
+
+    if (p0_r) // right to change to DPC sound mode
+    {
+        kernel = 1;
+        game_state = 2;
+        sound_mode = _SND_MODE_DPC;
+        SilenceWaves();
+    }
+
+    if (p0_u) // up for sample play from ROM
+    {
+        resetWave(0);
+        setNote(0, 1600);
+        setSamplePtr(_sample_steel);
+        sample_size = _sample_steel_size;
+    }
+
+    if (p0_d) // down for sample play from buffer
+    {
+        resetWave(0);
+        setNote(0, 800);
+        setWaveform(0, RAM_SAMPLE);
+        sample_size = sample1_size;
+    }
+}
