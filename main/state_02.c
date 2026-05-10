@@ -6,7 +6,7 @@
 
 /**************************** State 02 ****************************/
 // test game state 02 - DPC+ sound mode
-void S02_Upper(void)
+void S02_VBlank(void)
 {
     RAM[_buffer0 + 191] -= 1;
     for (int i = 190; i >= 0; i--)
@@ -17,13 +17,13 @@ void S02_Upper(void)
     setPointer(DSJMP1PTR, _jump_table_1);
 }
 
-void S02_Lower(void)
+void S02_Over(void)
 {
 
     if (p0_l) // left to change to digital sample sound mode
     {
-        kernel = 1;
-        game_state = 1;
+        kernel = KERNEL_SAMPLE_SOUND;
+        game_state = STATE_SAMPLE_SOUND;
         sound_mode = _SND_MODE_SAMPLE;
         SilenceWaves();
     }

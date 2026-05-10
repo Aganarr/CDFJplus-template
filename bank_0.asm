@@ -37,7 +37,7 @@ start
 	sei
 	cld
 clear_stack
-	ldx #$0a				; ASL opcode = $0A
+	ldx #$0a					; ASL opcode = $0A
 	inx
 	txs
 	pha
@@ -46,74 +46,74 @@ clear_stack
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@ Software Init @@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-	jsr read_save_key		;<SaveKey> sets sk_detect with presence of SaveKey
+	jsr read_save_key			;<SaveKey> sets sk_detect with presence of SaveKey
 
-	ldx #9				;@ <FRAMEWORK>
-loop_init_jump_code			;@
-	lda jump_code,x		;@ Code needed for bank routine
-	sta jump_code_RAM,x		;@ dispatch handler
-	dex				;@
-	bpl loop_init_jump_code	;@
-	inx				;@
-	stx DSPTR			;@
-	stx DSPTR			;@
-	stx DSWRITE			;@
-	stx SETMODE			;@ FastFetch ON
-	dex				;@
-	stx CALLFN			;@ Init ARM call
+	ldx #9						;@ <FRAMEWORK>
+loop_init_jump_code				;@
+	lda jump_code,x				;@ Code needed for bank routine
+	sta jump_code_RAM,x			;@ dispatch handler
+	dex							;@
+	bpl loop_init_jump_code		;@
+	inx							;@
+	stx DSPTR					;@
+	stx DSPTR					;@
+	stx DSWRITE					;@
+	stx SETMODE					;@ FastFetch ON
+	dex							;@
+	stx CALLFN					;@ Init ARM call
 
-	lda #DS31DATA			;@
-	sta kernel			;@ read initial states
-	lda #DS31DATA			;@ from ARM
-	sta sound_mode			;@
-	sta sound_save			;@
-	tax				;@
+	lda #DS31DATA				;@
+	sta kernel					;@ read initial states
+	lda #DS31DATA				;@ from ARM
+	sta sound_mode				;@
+	sta sound_save				;@
+	tax							;@
 	lda sound_mode_table,x		;@
-	sta SETMODE			;@ set proper sound mode
-	lda call_fn_table,x		;@
-	sta call_fn			;@ apply proper function caller
+	sta SETMODE					;@ set proper sound mode
+	lda call_fn_table,x			;@
+	sta call_fn					;@ apply proper function caller
 
 	ldy _DETECT_FRAME_COUNT		;@
-loop_init_frames			;@
-	lda #%1110			;@
-vertsync_init				;@
-	sta WSYNC			;@ 10 dedicated 262 scanline frames to
-	sta VSYNC			;@ time and detect TV type
-	lsr 				;@
-	bne vertsync_init		;@
-	lda #$ff			;@
-	sta CALLFN			;@
-	ldx #129			;@
+loop_init_frames				;@
+	lda #%1110					;@
+vertsync_init					;@
+	sta WSYNC					;@ 10 dedicated 262 scanline frames to
+	sta VSYNC					;@ time and detect TV type
+	lsr 						;@
+	bne vertsync_init			;@
+	lda #$ff					;@
+	sta CALLFN					;@
+	ldx #129					;@	number of dual scanlines needed to make a 262 scanline frame with VSYNC
 loop_frame_delay_init			;@
-	sta WSYNC			;@
-	sta WSYNC			;@
-	dex				;@
+	sta WSYNC					;@
+	sta WSYNC					;@
+	dex							;@
 	bne loop_frame_delay_init	;@
-	dey				;@
+	dey							;@
 	bpl loop_init_frames		;@
-					;@
-	lda #DS31DATA			;@
-	sta tv_type			;@
+								;@
+	lda #DS31DATA				;@
+	sta tv_type					;@
 
 
-	lda #80				;only for demonstration of positioning method purposes
-	sta test_position		;
+	lda #80						;only for demonstration of positioning method purposes
+	sta test_position			;
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Game Loop @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 main_game_loop
 
-	lda sound_mode			; compare this frame's sound mode
-	cmp sound_save			; to last frame's
+	lda sound_mode				; compare this frame's sound mode
+	cmp sound_save				; to last frame's
 	beq skip_change_modes		;
-	sta sound_save			; apply new mode if change
-	tax				; is detected
+	sta sound_save				; apply new mode if change
+	tax							; is detected
 	lda sound_mode_table,x		;
-	sta SETMODE			;
-	lda call_fn_table,x		;
-	sta call_fn			;
-skip_change_modes			;
-	tax				; branch to proper frame handler
+	sta SETMODE					;
+	lda call_fn_table,x			;
+	sta call_fn					;
+skip_change_modes				;
+	tax							; branch to proper frame handler
 	bne main_game_loop_sampled	; standard TIA or sampled sound
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -129,11 +129,11 @@ vertsync_std
 	bne vertsync_std
 	
 	ldx tv_type
-	lda upper_vblank_table,x
+	lda vblank_table,x
 	sta TIM64T
 ;@@@@@@@@@@@@@@@@@@@@
 
-	jsr upper_vblank_ARM
+	jsr vblank_ARM
 
 ;@@@@@@@@@@@@@@@@@@@@
 wait_vblank_end_std
@@ -151,11 +151,11 @@ wait_vblank_end_std
 	sta WSYNC
 	sta VBLANK
 	ldx tv_type
-	lda lower_vblank_table,x
+	lda overscan_table,x
 	sta TIM64T
 ;@@@@@@@@@@@@@@@@@@@@
 
-	jsr lower_vblank_ARM
+	jsr overscan_ARM
 
 	lda audc0
 	sta AUDC0
@@ -201,11 +201,11 @@ vertsync_samp
 	sta AUDV0
 	
 	ldx tv_type
-	lda upper_vblank_table,x
+	lda vblank_table,x
 	sta TIM64T
 ;@@@@@@@@@@@@@@@@@@@@
 
-	jsr upper_vblank_ARM
+	jsr vblank_ARM
 
 ;@@@@@@@@@@@@@@@@@@@@
 wait_vblank_end_samp
@@ -227,11 +227,11 @@ wait_vblank_end_samp
 	lda #AMPLITUDE
 	sta AUDV0
 	ldx tv_type
-	lda lower_vblank_table,x
+	lda overscan_table,x
 	sta TIM64T
 ;@@@@@@@@@@@@@@@@@@@@
 
-	jsr lower_vblank_ARM
+	jsr overscan_ARM
 
 	lda audc1
 	sta AUDC1
@@ -257,12 +257,12 @@ wait_overscan_samp
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@ Tables for Frame Dispatch @@@@@@@@@@@@
 
-sound_mode_table		;for auto-adjust to SETMODE mirror
+sound_mode_table					;for auto-adjust to SETMODE mirror
 	.byte #$00
 	.byte #$f0
 	.byte #$00
 
-call_fn_table			;for auto-adjust to call_fn mirror
+call_fn_table						;for auto-adjust to call_fn mirror
 	.byte #$ff
 	.byte #$fe
 	.byte #$fe
@@ -275,12 +275,12 @@ call_fn_table			;for auto-adjust to call_fn mirror
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@ Tables for VBlank Areas @@@@@@@@@@@@@
 
-upper_vblank_table
-	.byte UPPER_BLANK_TIMER_60
-	.byte UPPER_BLANK_TIMER_50
-lower_vblank_table
-	.byte LOWER_BLANK_TIMER_60
-	.byte LOWER_BLANK_TIMER_50
+vblank_table
+	.byte VBLANK_TIMER_60
+	.byte VBLANK_TIMER_50
+overscan_table
+	.byte OVERSCAN_TIMER_60
+	.byte OVERSCAN_TIMER_50
 
 ;@@@@@@@@@@@@@ Tables for VBlank Areas @@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -288,20 +288,20 @@ lower_vblank_table
 
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-;@@@@@@@@@@@@@@@@@@@@@@@@ Handle Upper VBlank ARM Call @@@@@@@@@@@@@@@@@@@@@@@@
-upper_vblank_ARM
+;@@@@@@@@@@@@@@@@@@@@@@@@@@@ Handle VBlank ARM Call @@@@@@@@@@@@@@@@@@@@@@@@@@@
+vblank_ARM
 
 
 	ldx #<_C_routine
 	stx DSPTR
 	stx DSPTR
-	ldx #_ARM_UPPER_VBLANK		;let ARM know we are lower VBlank
+	ldx #_ARM_VBLANK				;let ARM know we are lower VBlank
 	stx DSWRITE
 
 	ldx call_fn
 	stx CALLFN
 
-	ldx kernel			;after ARM upper VBlank dispatch kernel's prep routine
+	ldx kernel						;after ARM VBlank dispatch kernel's prep routine
 	lda kernel_prep_table_h,x
 	pha
 	lda kernel_prep_table_l,x
@@ -317,23 +317,23 @@ kernel_prep_table_l
 	.byte #<(k_prep_00-1)
 	.byte #<(k_prep_01-1)
 
-;@@@@@@@@@@@@@@@@@@@@@@@@ Handle Upper VBlank ARM Call @@@@@@@@@@@@@@@@@@@@@@@@
+;@@@@@@@@@@@@@@@@@@@@@@@@@@@ Handle VBlank ARM Call @@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-;@@@@@@@@@@@@@@@@@@@@@@@@ Handle Lower VBlank ARM Call @@@@@@@@@@@@@@@@@@@@@@@@
-lower_vblank_ARM
+;@@@@@@@@@@@@@@@@@@@@@@@@@@ Handle Overscan ARM Call @@@@@@@@@@@@@@@@@@@@@@@@@@
+overscan_ARM
 
 	ldx #<_C_routine
-	stx COLUBK			;clear color registers while X = 0
+	stx COLUBK						;clear color registers while X = 0
 	stx COLUP0
 	stx COLUP1
 	stx COLUPF
 	stx DSPTR
 	stx DSPTR
-	ldx #_ARM_LOWER_VBLANK		;let ARM know we are lower VBlank
+	ldx #_ARM_OVERSCAN				;let ARM know we are Overscan
 	stx DSWRITE
 	ldx SWCHA
 	stx DSWRITE
@@ -342,16 +342,16 @@ lower_vblank_ARM
 	ldx INPT4
 	stx DSWRITE
 	ldx INPT5
-	stx DSWRITE			;all Atari inputs to ARM
-	ldx sk_detect			;<SaveKey>
-	stx DSWRITE			;<SaveKey>
+	stx DSWRITE						;all Atari inputs to ARM
+	ldx sk_detect					;<SaveKey>
+	stx DSWRITE						;<SaveKey>
 
 	ldx call_fn
 	stx CALLFN
 
 	lda #DS31DATA
-	sta kernel			;kernel and sound_mode get refreshed
-	lda #DS31DATA			;from the ARM each frame
+	sta kernel						;kernel and sound_mode get refreshed
+	lda #DS31DATA					;from the ARM each frame
 	sta sound_mode
 	lda #DS31DATA
 	sta audv0
@@ -366,11 +366,11 @@ lower_vblank_ARM
 	lda #DS31DATA
 	sta audf1
 
-	lda sk_command			;<SaveKey> block of code
-	bmi write_to_save_key		;<SaveKey> preforms SaveKey operations one byte at a time each frame
-	bne read_from_save_key		;<SaveKey> to maintain the screen, sound will be slightly distorted
+	lda sk_command					;<SaveKey> block of code
+	bmi write_to_save_key			;<SaveKey> preforms SaveKey operations one byte at a time each frame
+	bne read_from_save_key			;<SaveKey> to maintain the screen, sound will be slightly distorted
 
-	lda #DS31DATA			;test for new save key operation
+	lda #DS31DATA					;test for new save key operation
 	beq skip_save_key_operation
 	sta sk_command
 	tay
@@ -384,7 +384,7 @@ lower_vblank_ARM
 	lda #DS31DATA
 	sta sk_addr_h
 	lda #DS31DATA
-	and #63				;wrap offset into 0-63 sk_RAM buffer range
+	and #63							;wrap offset into 0-63 sk_RAM buffer range
 	sta sk_offset
 	clc
 	adc sk_count
@@ -394,7 +394,7 @@ lower_vblank_ARM
 	bpl read_from_save_key
 
 	ldx #0
-loop_DD_to_sk_RAM			;load sk_RAM buffer with data from ARM
+loop_DD_to_sk_RAM					;load sk_RAM buffer with data from ARM
 	lda #DS31DATA
 	sta sk_RAM,x
 	inx
@@ -406,7 +406,7 @@ read_from_save_key
 	jsr read_save_key
 	ldx #>_save_data
 	stx DSPTR
-	lda #<_save_data		;reads can update DD ARM after each byte
+	lda #<_save_data				;reads can update DD ARM after each byte
 	clc
 	adc sk_offset
 	sta DSPTR
@@ -426,15 +426,15 @@ done_savekey_operation
 acknowledge_save_command
 	ldx #0
 	stx sk_command
-	ldx #>_save_command		;X = 0 here, using this for DSWRITE
-	stx DSPTR			;<SaveKey>
-	ldy #<_save_command		;<SaveKey>
-	sty DSPTR			;<SaveKey>
-	stx DSWRITE			;<SaveKey> block of code
+	ldx #>_save_command				;X = 0 here, using this for DSWRITE
+	stx DSPTR						;<SaveKey>
+	ldy #<_save_command				;<SaveKey>
+	sty DSPTR						;<SaveKey>
+	stx DSWRITE						;<SaveKey> block of code
 
 skip_save_key_operation
 	rts
-;@@@@@@@@@@@@@@@@@@@@@@@@ Handle Lower VBlank ARM Call @@@@@@@@@@@@@@@@@@@@@@@@
+;@@@@@@@@@@@@@@@@@@@@@@@@@@ Handle Overscan ARM Call @@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 

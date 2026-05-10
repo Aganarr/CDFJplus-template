@@ -30,12 +30,16 @@ const unsigned char waveforms[] __attribute__((aligned(4))) = {
 /******************************* Variables *******************************/
 
 // stay ARM-side
-unsigned int rand = 10531789;          // 32 bit LFSR random number
-unsigned int frame = 0;                // frame counter
-unsigned short game_state = 0;         // internal ARM game state
-short sample_size = 0;                 // current digital sample size (bytes)
-bool save_key_detected = false;        // save key present flag
-unsigned char tv_type = _TV_TYPE_60HZ; // detected TV type
+unsigned int rand = 10531789;                // 32 bit LFSR random number
+unsigned int frame = 0;                      // frame counter
+unsigned short game_state = STATE_TIA_SOUND; // internal ARM game state
+short sample_size = 0;                       // current digital sample size (bytes)
+bool save_key_detected = false;              // save key present flag
+unsigned char tv_type = _TV_TYPE_60HZ;       // code detected TV frequency type
+unsigned char tv_color = NTSC;               // user driven TV color
+
+unsigned char TranslatePalColor[] = {0x00, 0x20, 0x20, 0x40, 0x60, 0x80, 0xA0, 0xC0, 0xD0, 0xB0, 0x90, 0x50, 0x70, 0x30, 0x20, 0x40};
+unsigned char TranslateSecamColor[] = {0x0, 0xE, 0xC, 0x4, 0x4, 0x6, 0x6, 0x2, 0x2, 0x2, 0x8, 0x8, 0x8, 0x8, 0xC, 0xC};
 
 // to Atari-side
 unsigned char kernel = 0;                 // drawing kernel used/passed Atari-side
@@ -50,8 +54,8 @@ unsigned short input_target[12];
 
 /******************************* Framework Functions *******************************/
 static void Initialize();
-static void UpperVBlank();
-static void LowerVBlank();
+static void VBlank();
+static void Overscan();
 
 static void HandleControls();
 
@@ -72,18 +76,18 @@ int main()
     {
     case _ARM_INIT:
         Initialize();
+        frame += 1;
         break;
-    case _ARM_UPPER_VBLANK:
-        UpperVBlank();
+    case _ARM_VBLANK:
+        VBlank();
         break;
-    case _ARM_LOWER_VBLANK:
-        LowerVBlank();
+    case _ARM_OVERSCAN:
+        Overscan();
+        frame += 1;
         break;
     default:
         break;
     }
-
-    frame += 1; // this must be after routine dispatch and within main call
 
     return 0;
 }
@@ -118,7 +122,8 @@ static void Initialize()
         break;
 
     case 1:
-        tv_type = _TV_TYPE_60HZ; // force NTSC frame for autodetect purposes
+        tv_type = _TV_TYPE_60HZ; // force NTSC frame and color
+        tv_color = NTSC;         // for autodetect purposes
 
         T1TC = 0;
         T1TCR = 1;
@@ -134,38 +139,28 @@ static void Initialize()
 
         static const struct tv_types
         {
-            int freq;
-            unsigned char fmt;
-        } frameTimes[] = {{
-                              NTSC_70MHZ,
-                              _TV_TYPE_60HZ,
-                          },
-                          {
-                              PAL_70MHZ,
-                              _TV_TYPE_50HZ,
-                          },
-                          {
-                              NTSC_60MHZ,
-                              _TV_TYPE_60HZ,
-                          },
-                          {
-                              PAL_60MHZ,
-                              _TV_TYPE_50HZ,
-                          }};
+            int cycleCount;
+            unsigned char type;
+            unsigned char color;
+        } frameTimes[] = {
+            {NTSC_70MHZ, _TV_TYPE_60HZ, NTSC}, {PAL_70MHZ, _TV_TYPE_50HZ, PAL}, {NTSC_60MHZ, _TV_TYPE_60HZ, NTSC}, {PAL_60MHZ, _TV_TYPE_50HZ, PAL}};
 
         int max_diff = INT_MAX;
         for (unsigned int i = 0; i < sizeof(frameTimes) / sizeof(struct tv_types); i++)
         {
-            int diff = TV_detect_timer - frameTimes[i].freq;
+            int diff = TV_detect_timer - frameTimes[i].cycleCount;
             if (diff < 0)
                 diff = -diff;
 
             if (diff < max_diff)
             {
                 max_diff = diff;
-                tv_type = frameTimes[i].fmt;
+                tv_type = frameTimes[i].type;
+                tv_color = frameTimes[i].color;
             }
         }
+
+        // tv_color = NTSC; // TV color override here
 
         RAM[_C_routine] = tv_type; // pass tv_type as a 'one time' through _C_routine
         setPointer(31, _C_routine);
@@ -177,32 +172,15 @@ static void Initialize()
     }
 }
 
-// upper VBlank dispatcher - includes sample end handler
-static void UpperVBlank()
+// Add ARM VBlank handler function names here
+void (*const VectorVBlank[])() = {S00_VBlank, S01_VBlank, S02_VBlank
+
+};
+
+// VBlank dispatcher - includes sample end handler
+static void VBlank()
 {
-    switch (game_state)
-    {
-    case 0:
-        S00_Upper();
-        break;
-    case 1:
-        S01_Upper();
-        break;
-    case 2:
-        S02_Upper();
-        break;
-    case 3:
-
-        break;
-    case 4:
-
-        break;
-    case 5:
-
-        break;
-    default:
-        break;
-    }
+    (*VectorVBlank[game_state])();
 
     if (sound_mode == _SND_MODE_SAMPLE)
     {
@@ -214,36 +192,19 @@ static void UpperVBlank()
     }
 }
 
-// lower VBlank dispatcher - includes control handler and communication to Atari
-static void LowerVBlank()
+// Add ARM Overscan handler function names here
+void (*const VectorOverscan[])() = {S00_Over, S01_Over, S02_Over
+
+};
+
+// Overscan dispatcher - includes control handler and communication to Atari
+static void Overscan()
 {
     save_key_detected = (RAM[_SK_DETECT]);
 
     HandleControls();
 
-    switch (game_state)
-    {
-    case 0:
-        S00_Lower();
-        break;
-    case 1:
-        S01_Lower();
-        break;
-    case 2:
-        S02_Lower();
-        break;
-    case 3:
-
-        break;
-    case 4:
-
-        break;
-    case 5:
-
-        break;
-    default:
-        break;
-    }
+    (*VectorOverscan[game_state])();
 
     Random(1);
 
@@ -252,6 +213,7 @@ static void LowerVBlank()
     setPointer(DS31PTR, _kernel);
 }
 
+/******************************* Handle Controls/Switches *******************************/
 // Controller Handler - converts raw input to debounced pulsed wait and repeat timings
 static void HandleControls()
 {
@@ -294,6 +256,7 @@ static void HandleControls()
     }
 }
 
+/******************************* Waveform Routines *******************************/
 // Used to set waveforms to all silent / no note
 void SilenceWaves()
 {
@@ -316,6 +279,7 @@ void SilenceTIA()
     RAM[_AUDF1] = 0;
 }
 
+/******************************* SaveKey Routines *******************************/
 // Write to SaveKey
 void SaveKeyWrite(unsigned short address, unsigned char offset, unsigned char count)
 {
@@ -336,6 +300,7 @@ void SaveKeyRead(unsigned short address, unsigned char offset, unsigned char cou
         RAM[_save_command] = _SAVE_KEY_READ;
 }
 
+/******************************* Digital Sample Routines *******************************/
 void playSample(unsigned short sample_id, unsigned int pitch)
 {
     MemCopy32((void *)(_DD_BASE + _digital_sample), samples[sample_id].data, samples[sample_id].size / 4);
@@ -352,4 +317,42 @@ void playRomSample(unsigned short sample_id, unsigned int pitch)
     setNote(0, pitch);
     setSamplePtr(rom_samples[sample_id].data);
     sample_size = rom_samples[sample_id].size;
+}
+
+/******************************* Color Mode Conversion *******************************/
+unsigned char convertColor(unsigned char color)
+{
+    switch (tv_color)
+    {
+
+    case SECAM:
+    {
+        //  color = secamConvert(color);
+        unsigned char c = TranslateSecamColor[color >> 4];
+        unsigned char l = color & 0xF;
+        if (l >= 0xa)
+        {           // if "bright"
+            if (!c) // light grey -> white
+                c = 0xE;
+            else if (c == 2) // blue -> cyan
+                c = 0xA;
+        }
+        if ((l >= 4) && (!c))
+            c = 0xa; // med grey -> cyan
+        if (l <= 2)
+            c = 0; // Dark tone -> black
+        color = c;
+        // return c
+        break;
+    }
+
+    case PAL:
+        color = TranslatePalColor[color >> 4] | (color & 0xF);
+        break;
+
+    default: // anything other than PAL or SECAM just returns original color
+        break;
+    }
+
+    return color;
 }

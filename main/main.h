@@ -19,18 +19,45 @@
 
 
 /******************************* Constants/Defines *******************************/
-#define WAV_SILENCE 0
-#define WAV_SQUARE 1
-#define WAV_TRIANGLE 2
-#define WAV_SAW 3
-#define WAV_SIN 4
-#define RAM_SAMPLE 8 // for 64k+ ROMs samples can be held in DD RAM - this assumes
-// it remains directly after the waveform RAM
 
 #ifndef __GNUC__
 #define __attribute__(x)
 #endif
 
+enum WAVEWORMS {
+    WAV_SILENCE,        // 0
+    WAV_SQUARE,         // 1
+    WAV_TRIANGLE,       // 2
+    WAV_SAW,            // 3
+    WAV_SIN,            // 4
+    WAV_USER1,          // 5
+    WAV_USER2,          // 6
+    WAV_USER3,          // 7
+    RAM_SAMPLE          // 8        // for 64k+ ROMs, framework allocates DD RAM for samples  - this assumes it remains directly after the waveform RAM
+};
+
+enum TV_COLORS {
+    NTSC,               // 0
+    PAL,                // 1
+    SECAM               // 2
+};
+
+// Controls which Kernel on the Atari is run
+enum KERNEL {
+    KERNEL_TIA_SOUND,       // 0
+    KERNEL_SAMPLE_SOUND     // 1
+
+
+};
+
+// Controls which VB and OS are run
+enum GAME_STATE {
+    STATE_TIA_SOUND,        // 0
+    STATE_SAMPLE_SOUND,     // 1
+    STATE_DPC_SOUND         // 2
+    
+
+};
 
 /******************************* Structures *******************************/
 
@@ -43,7 +70,8 @@ extern unsigned int frame;                  // frame counter
 extern unsigned short game_state;           // internal ARM game state
 extern short sample_size;                   // current digital sample size (bytes)
 extern bool save_key_detected;              // save key present flag
-extern unsigned char tv_type;               // detected TV type
+extern unsigned char tv_color;              // code initialized, user overridable TV color
+
 
 // to Atari-side
 extern unsigned char kernel;                // drawing kernel used/passed Atari-side
@@ -121,6 +149,8 @@ void SilenceTIA();
 
 void playSample (unsigned short sample_id, unsigned int pitch);
 void playRomSample (unsigned short sample_id, unsigned int pitch);
+
+unsigned char convertColor(unsigned char color);
 
 /******************************* Shared User Functions *******************************/
 

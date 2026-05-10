@@ -6,22 +6,26 @@
 
 /**************************** State 00 ****************************/
 // test game state 00 - TIA sound mode and SaveKey
-void S00_Upper(void)
+void S00_VBlank(void)
 {
-    RAM[_buffer0] += 1;
+    RAM[_buffer0] = frame;
     for (int i = 1; i <= 191; i++)
     {
         RAM[_buffer0 + i] = RAM[_buffer0 + i - 1] + 1;
     }
+    for (int i = 0; i <= 191; i++)
+    {
+        RAM[_buffer0 + i] = convertColor(RAM[_buffer0 + i]);
+    }
     setPointer(DS0PTR, _buffer0);
 }
 
-void S00_Lower(void)
+void S00_Over(void)
 {
     if (p0_r) // right to change to digital sample sound mode
     {
-        kernel = 1;
-        game_state = 1;
+        kernel = KERNEL_SAMPLE_SOUND;
+        game_state = STATE_SAMPLE_SOUND;
         sound_mode = _SND_MODE_SAMPLE;
     }
 

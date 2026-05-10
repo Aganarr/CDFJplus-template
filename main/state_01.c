@@ -6,7 +6,7 @@
 
 /**************************** State 01 ****************************/
 // test game state 01 - digital sample sound mode
-void S01_Upper(void)
+void S01_VBlank(void)
 {
     RAM[_buffer0] -= 1;
     for (int i = 1; i <= 191; i++)
@@ -17,39 +17,31 @@ void S01_Upper(void)
     setPointer(DSJMP1PTR, _jump_table_1);
 }
 
-void S01_Lower(void)
+void S01_Over(void)
 {
     if (p0_l) // left to change to TIA sound mode
     {
-        game_state = 0;
-        kernel = 0;
+        game_state = STATE_TIA_SOUND;
+        kernel = KERNEL_TIA_SOUND;
         sound_mode = _SND_MODE_TIA;
         SilenceWaves();
     }
 
     if (p0_r) // right to change to DPC sound mode
     {
-        kernel = 1;
-        game_state = 2;
+        kernel = KERNEL_SAMPLE_SOUND;
+        game_state = STATE_DPC_SOUND;
         sound_mode = _SND_MODE_DPC;
         SilenceWaves();
     }
 
     if (p0_u) // up for sample play from ROM
     {
-        // resetWave(0);
-        // setNote(0, 1600);
-        // setSamplePtr(rom_samples[0].data);
-        // sample_size = rom_samples[0].size;
         playRomSample(0, 1600);
     }
 
     if (p0_d) // down for sample play from buffer
     {
-        // resetWave(0);
-        // setNote(0, 800);
-        // setWaveform(0, RAM_SAMPLE);
-        // sample_size = samples[0].size;
         playSample(0, 800);
     }
 }
