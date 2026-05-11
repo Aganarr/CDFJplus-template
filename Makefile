@@ -60,6 +60,9 @@
 ###############################################################################
 # User/system-specific paths -- where are things located on your system?
 
+# Source name - will auto-name to containg folder name unless overridden 
+SOURCE := $(shell basename "$$(pwd)")
+
 # Tools
 TOOLCHAIN	= arm-none-eabi
 DASM		= dasm
@@ -121,7 +124,6 @@ check-host-tools:
 	done
 
 # Dirs/files
-SOURCE = cdfj+_template
 BASE   = main
 SRC    = $(BASE)/custom
 BIN    = $(BASE)/bin

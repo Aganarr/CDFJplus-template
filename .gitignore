@@ -1,6 +1,3 @@
-_cdfj+_template BACKUPS/
-_RELEASE set of files/
-_zips/
 _ROMs/
 .vscode/
 main/bin/
@@ -13,4 +10,5 @@ output/
 *.elf
 *.map
 *.exe
-.gitignore
+*.bat
+

@@ -29,7 +29,7 @@
 ;@		512		9472		;256B sys + 256B wav + 2048B Digital Sample buffer + 32 * 192B DS Channels + 2 * 384B Jump Channels = 9472
 ;@
 ;@@@@@@@@
-ROM_SIZE			= 64			
+ROM_SIZE			= 128			
 DISPLAY_SIZE		= 6400
 ;@@@@@@@@
 ;@
