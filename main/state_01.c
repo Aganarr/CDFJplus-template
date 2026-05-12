@@ -24,7 +24,9 @@ void S01_Over(void)
         game_state = STATE_TIA_SOUND;
         kernel = KERNEL_TIA_SOUND;
         sound_mode = _SND_MODE_TIA;
+#if (_ENABLE_WAV_SOUND == 1)
         SilenceWaves();
+#endif
     }
 
     if (p0_r) // right to change to DPC sound mode
@@ -32,9 +34,12 @@ void S01_Over(void)
         kernel = KERNEL_SAMPLE_SOUND;
         game_state = STATE_DPC_SOUND;
         sound_mode = _SND_MODE_DPC;
+#if (_ENABLE_WAV_SOUND == 1)
         SilenceWaves();
+#endif
     }
 
+#if (_ENABLE_WAV_SOUND == 1)
     if (p0_u) // up for sample play from ROM
     {
         playRomSample(0, 1600);
@@ -44,4 +49,5 @@ void S01_Over(void)
     {
         playSample(0, 800);
     }
+#endif
 }

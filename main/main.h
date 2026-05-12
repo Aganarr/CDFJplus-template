@@ -12,7 +12,9 @@
 #include <stdbool.h>
 
 /**************************** External .c code headers ****************************/
+#if (_ENABLE_WAV_SOUND == 1)
 #include "samples.h"
+#endif
 #include "state_00.h"
 #include "state_01.h"
 #include "state_02.h"

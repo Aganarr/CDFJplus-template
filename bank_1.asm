@@ -40,6 +40,8 @@ kernel_00_loop				;kernel_00 shows a "standard" display loop
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Kernel 00 Routine @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
+
+
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Kernel 01 Routine @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 kernel_01
@@ -47,9 +49,11 @@ kernel_01
 _kernel_01_loop				;kernel_01 demontrates the FastJump streams
 	sta WSYNC
 
+	if (_ENABLE_WAV_SOUND == 1)
 	lda #AMPLITUDE
 	sta AUDV0			;as well as handling wave samples
 	tay
+	endif
 
 	lda #DS0DATA
 	sta COLUBK
@@ -104,3 +108,5 @@ amp_table1
 BANK1_CODE_SIZE = * - BANK_1;
 	echo "---- BANK1", BANK1_CODE_SIZE, "bytes"
 	echo "---- BANK1", ($fff0 - *), "bytes free"
+
+CURRENT_BANK set CURRENT_BANK + $1000

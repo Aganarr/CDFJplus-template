@@ -14,6 +14,7 @@ Gamax Software 2026 - Craig Daniels
 
 /******************************* Data/Includes *******************************/
 
+#if (_ENABLE_WAV_SOUND == 1)
 // 32 byte DPC+ "waveforms" - each range from 1 to 5 with 3 being "center" of waveform
 const unsigned char waveforms[] __attribute__((aligned(4))) = {
     3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, // 0- wave silence
@@ -26,6 +27,7 @@ const unsigned char waveforms[] __attribute__((aligned(4))) = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  // 7- user waveform 3
 };
 #define WAVEFORM_SIZE sizeof(waveforms)
+#endif
 
 /******************************* Variables *******************************/
 
@@ -34,9 +36,13 @@ unsigned int rand = 10531789;                // 32 bit LFSR random number
 unsigned int frame = 0;                      // frame counter
 unsigned short game_state = STATE_TIA_SOUND; // internal ARM game state
 short sample_size = 0;                       // current digital sample size (bytes)
-bool save_key_detected = false;              // save key present flag
-unsigned char tv_type = _TV_TYPE_60HZ;       // code detected TV frequency type
-unsigned char tv_color = NTSC;               // user driven TV color
+
+#if (_ENABLE_SAVEKEY == 1)
+bool save_key_detected = false; // save key present flag
+#endif
+
+unsigned char tv_type = _TV_TYPE_60HZ; // code detected TV frequency type
+unsigned char tv_color = NTSC;         // user driven TV color
 
 unsigned char TranslatePalColor[] = {0x00, 0x20, 0x20, 0x40, 0x60, 0x80, 0xA0, 0xC0, 0xD0, 0xB0, 0x90, 0x50, 0x70, 0x30, 0x20, 0x40};
 unsigned char TranslateSecamColor[] = {0x0, 0xE, 0xC, 0x4, 0x4, 0x6, 0x6, 0x2, 0x2, 0x2, 0x8, 0x8, 0x8, 0x8, 0xC, 0xC};
@@ -104,7 +110,9 @@ static void Initialize()
         for (int i = 0; i < 34; i++)
             setIncrement(i, 1, 0); // increments to 1
 
+#if (_ENABLE_WAV_SOUND == 1)
         MemCopy32((void *)_WAV_BASE, waveforms, WAVEFORM_SIZE / 4); // waveforms to DD memory
+#endif
 
         //  set up demo jump table 1 for kernel_01
         for (int i = 0; i <= 190; i++)
@@ -117,10 +125,12 @@ static void Initialize()
         RAM[_sound_mode] = sound_mode;
         setPointer(DS31PTR, _kernel); // pass initial state to Atari
 
+#if (_ENABLE_WAV_SOUND == 1)
         SilenceWaves(); // init DPC waveforms
+#endif
 
         break;
-
+#if (_ENABLE_TV_DETECT == 1)
     case 1:
         tv_type = _TV_TYPE_60HZ; // force NTSC frame and color
         tv_color = NTSC;         // for autodetect purposes
@@ -166,6 +176,7 @@ static void Initialize()
         setPointer(31, _C_routine);
 
         break;
+#endif
 
     default:
         break;
@@ -200,7 +211,9 @@ void (*const VectorOverscan[])() = {S00_Over, S01_Over, S02_Over
 // Overscan dispatcher - includes control handler and communication to Atari
 static void Overscan()
 {
+#if (_ENABLE_SAVEKEY == 1)
     save_key_detected = (RAM[_SK_DETECT]);
+#endif
 
     HandleControls();
 
@@ -257,6 +270,8 @@ static void HandleControls()
 }
 
 /******************************* Waveform Routines *******************************/
+
+#if (_ENABLE_WAV_SOUND == 1)
 // Used to set waveforms to all silent / no note
 void SilenceWaves()
 {
@@ -267,6 +282,7 @@ void SilenceWaves()
     setNote(1, 0);
     setNote(2, 0);
 }
+#endif
 
 // Used to set TIA sound to all silent / no note
 void SilenceTIA()
@@ -281,6 +297,9 @@ void SilenceTIA()
 
 /******************************* SaveKey Routines *******************************/
 // Write to SaveKey
+
+#if (_ENABLE_SAVEKEY == 1)
+
 void SaveKeyWrite(unsigned short address, unsigned char offset, unsigned char count)
 {
     RAM_2B[_save_addr_l / 2] = address;
@@ -300,7 +319,11 @@ void SaveKeyRead(unsigned short address, unsigned char offset, unsigned char cou
         RAM[_save_command] = _SAVE_KEY_READ;
 }
 
+#endif
+
 /******************************* Digital Sample Routines *******************************/
+
+#if (_ENABLE_WAV_SOUND == 1)
 void playSample(unsigned short sample_id, unsigned int pitch)
 {
     MemCopy32((void *)(_DD_BASE + _digital_sample), samples[sample_id].data, samples[sample_id].size / 4);
@@ -318,6 +341,7 @@ void playRomSample(unsigned short sample_id, unsigned int pitch)
     setSamplePtr(rom_samples[sample_id].data);
     sample_size = rom_samples[sample_id].size;
 }
+#endif
 
 /******************************* Color Mode Conversion *******************************/
 unsigned char convertColor(unsigned char color)

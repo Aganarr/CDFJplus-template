@@ -25,8 +25,12 @@ void S02_Over(void)
         kernel = KERNEL_SAMPLE_SOUND;
         game_state = STATE_SAMPLE_SOUND;
         sound_mode = _SND_MODE_SAMPLE;
+#if (_ENABLE_WAV_SOUND == 1)
         SilenceWaves();
+#endif
     }
+
+#if (_ENABLE_WAV_SOUND == 1)
     if (p0_u) // up to play wave channel 0
     {
         setWaveform(0, WAV_TRIANGLE);
@@ -46,4 +50,5 @@ void S02_Over(void)
     {
         SilenceWaves();
     }
+#endif
 }

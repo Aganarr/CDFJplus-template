@@ -1,3 +1,5 @@
+CURRENT_BANK set $0800
+
 	org CURRENT_BANK
 	rorg $f000
 
@@ -11,6 +13,7 @@ blank_scanlines
 	bne blank_scanlines			;can use .blank_scanlines in any bank
 	rts
 
+	if (_ENABLE_WAV_SOUND == 1)
 blank_scanlines_aud				;can use .blank_scanlines_aud in any bank
 	sta WSYNC
 	lda #AMPLITUDE
@@ -18,6 +21,7 @@ blank_scanlines_aud				;can use .blank_scanlines_aud in any bank
 	dex
 	bne blank_scanlines_aud
 	rts
+	endif
 ;@@@@@@@@@@@@@@@@@@@@@ These routines put at beginning of each bank so all have access @@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
@@ -46,7 +50,9 @@ clear_stack
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@ Software Init @@@@@@@@@@@@@@@@@@@@@@@@@@@
 
+	if (_ENABLE_SAVEKEY == 1)
 	jsr read_save_key			;<SaveKey> sets sk_detect with presence of SaveKey
+	endif
 
 	ldx #9						;@ <FRAMEWORK>
 loop_init_jump_code				;@
@@ -60,10 +66,13 @@ loop_init_jump_code				;@
 	stx DSWRITE					;@
 	stx SETMODE					;@ FastFetch ON
 	dex							;@
+	stx call_fn					;@
 	stx CALLFN					;@ Init ARM call
 
 	lda #DS31DATA				;@
 	sta kernel					;@ read initial states
+
+	if (_ENABLE_WAV_SOUND == 1)
 	lda #DS31DATA				;@ from ARM
 	sta sound_mode				;@
 	sta sound_save				;@
@@ -72,7 +81,9 @@ loop_init_jump_code				;@
 	sta SETMODE					;@ set proper sound mode
 	lda call_fn_table,x			;@
 	sta call_fn					;@ apply proper function caller
+	endif
 
+	if (_ENABLE_TV_DETECT == 1)
 	ldy _DETECT_FRAME_COUNT		;@
 loop_init_frames				;@
 	lda #%1110					;@
@@ -94,6 +105,7 @@ loop_frame_delay_init			;@
 								;@
 	lda #DS31DATA				;@
 	sta tv_type					;@
+	endif
 
 
 	lda #80						;only for demonstration of positioning method purposes
@@ -103,6 +115,7 @@ loop_frame_delay_init			;@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Game Loop @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 main_game_loop
 
+	if (_ENABLE_WAV_SOUND == 1)
 	lda sound_mode				; compare this frame's sound mode
 	cmp sound_save				; to last frame's
 	beq skip_change_modes		;
@@ -115,6 +128,7 @@ main_game_loop
 skip_change_modes				;
 	tax							; branch to proper frame handler
 	bne main_game_loop_sampled	; standard TIA or sampled sound
+	endif
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Game Loop - Standard Sounds @@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -181,6 +195,7 @@ wait_overscan_std
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Game Loop - Standard Sounds @@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
+	if (_ENABLE_WAV_SOUND == 1)
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Game Loop - Sampled Sounds @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 main_game_loop_sampled
@@ -269,7 +284,7 @@ call_fn_table						;for auto-adjust to call_fn mirror
 
 ;@@@@@@@@@@@@ Tables for Frame Dispatch @@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
+	endif
 
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -295,7 +310,7 @@ vblank_ARM
 	ldx #<_C_routine
 	stx DSPTR
 	stx DSPTR
-	ldx #_ARM_VBLANK				;let ARM know we are lower VBlank
+	ldx #_ARM_VBLANK				;let ARM know we are in VBlank
 	stx DSWRITE
 
 	ldx call_fn
@@ -343,8 +358,11 @@ overscan_ARM
 	stx DSWRITE
 	ldx INPT5
 	stx DSWRITE						;all Atari inputs to ARM
+
+	if (_ENABLE_SAVEKEY == 1)
 	ldx sk_detect					;<SaveKey>
 	stx DSWRITE						;<SaveKey>
+	endif
 
 	ldx call_fn
 	stx CALLFN
@@ -366,6 +384,8 @@ overscan_ARM
 	lda #DS31DATA
 	sta audf1
 
+
+	if (_ENABLE_SAVEKEY == 1)
 	lda sk_command					;<SaveKey> block of code
 	bmi write_to_save_key			;<SaveKey> preforms SaveKey operations one byte at a time each frame
 	bne read_from_save_key			;<SaveKey> to maintain the screen, sound will be slightly distorted
@@ -431,6 +451,8 @@ acknowledge_save_command
 	ldy #<_save_command				;<SaveKey>
 	sty DSPTR						;<SaveKey>
 	stx DSWRITE						;<SaveKey> block of code
+	endif
+
 
 skip_save_key_operation
 	rts
@@ -469,7 +491,7 @@ ROUTINE_KERNEL_00 = * - jump_table_target_routine_h	;use this method to create n
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
-
+	if (_ENABLE_SAVEKEY == 1)
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@ Write Save Key Routine @@@@@@@@@@@@@@@@@@@@@@
 ;@ 1 byte 1310 cycles (17+ scanlines) including call
@@ -604,15 +626,17 @@ i2c_txack
 	rts
 ;@@@@@@@@@@@@@@@@@@@@@@@@ .i2c Routines @@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+	endif
 
 
+	if (_ENABLE_WAV_SOUND == 1)
 	org CURRENT_BANK+$0700			;org usage within each bank remains straightforward - use CURRENT_BANK + desired offset
 	rorg CURRENT_BANK+$0700			;samples need actual position within ROM, so rorg = org for those
-
 
 _sample_steel
 	INCBIN "/main/samples/sd2.bin"
 _sample_steel_size = * - _sample_steel
+	endif
 
 
 	org CURRENT_BANK+$0e00
@@ -696,10 +720,12 @@ loop_position_p1_2			;
 	rorg $f000+$0f00
 
 
+
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@ Positioning Table @@@@@@@@@@@@@@@@@@@@@@@@
 
 calc_rpfp_table		;RoughPosition/FinePosition table for position method [22]
+	if (_ENABLE_POS_TABLE == 1)
 	.byte #%00110000
 	.byte #%00100000
 	.byte #%00010000
@@ -874,7 +900,7 @@ calc_rpfp_table		;RoughPosition/FinePosition table for position method [22]
 
 ;@@@@@@@@@@@@@@@@@@@@@@@ Positioning Table @@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
+	endif
 
 
 
@@ -893,4 +919,4 @@ BANK0_CODE_SIZE = * - BANK_0;
 	DC.W start		;$FC	Reset
 	DC.W start		;$FE	BRK
 
-
+CURRENT_BANK set CURRENT_BANK + $1000

@@ -15,6 +15,11 @@
 ;@ CDFJ+ System and Framework Constants and Includes
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
+FF_X_ON					= $a2	;DO NOT CHANGE
+FF_X_OFF				= $a9	;DO NOT CHANGE
+FF_Y_ON					= $a0	;DO NOT CHANGE
+FF_Y_OFF				= $a9	;DO NOT CHANGE
+
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@ ROM CONFIGURATION (READ THIS OR IT WILL BREAK)
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -29,8 +34,8 @@
 ;@		512		9472		;256B sys + 256B wav + 2048B Digital Sample buffer + 32 * 192B DS Channels + 2 * 384B Jump Channels = 9472
 ;@
 ;@@@@@@@@
-ROM_SIZE			= 128			
-DISPLAY_SIZE		= 6400
+ROM_SIZE				= 64			
+DISPLAY_SIZE			= 6400
 ;@@@@@@@@
 ;@
 ;@ If you change ROM_SIZE, you MUST update DISPLAY_SIZE accordingly.
@@ -38,8 +43,8 @@ DISPLAY_SIZE		= 6400
 ;@ available RAM increases with larger ROMs
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-FF_LDX					= 1				;Fast Fetch for LDX: 0 = off, NZ = on
-FF_LDY					= 1				;Fast Fetch for LDY: 0 = off, NZ = on
+FF_LDX					= FF_X_ON		;Fast Fetch for LDX: FF_X_ON OR FF_X_OFF
+FF_LDY					= FF_Y_ON		;Fast Fetch for LDY: FF_Y_ON OR FF_Y_OFF
 FF_OFFSET				= 200			;Fast Fetch offset: 0 to 200
 C_START					= $7800			;$1800, $2800, $3800, $4800, $5800, $6800, $7800
 								; With current examples, C_START=$1800 will error because Bank1 contains 6507 routines.
@@ -51,6 +56,7 @@ C_START					= $7800			;$1800, $2800, $3800, $4800, $5800, $6800, $7800
 								; <WARNING> fast fetch macros may not work properly
 	INCLUDE "tia_constants.h"
 
+;@@@@@ DO NOT CHANGE THE REMAINING SYSTEM CONSTANTS @@@@@
 _DD_BASE				= $40000800		;DisplayData base exported into defines file and used in CDFJ routines
 _WAV_BASE				= _DD_BASE + _waveforms
 _RAM_BASE				= _DD_BASE + DISPLAY_SIZE
@@ -96,6 +102,15 @@ VBLANK_TIMER_50			= 62
 OVERSCAN_TIMER_50		= 75
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+;@ Feature Toggle Constants
+;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+_ENABLE_SAVEKEY			= 1				;saves 306 bytes Atari-side
+_ENABLE_TV_DETECT		= 1
+_ENABLE_WAV_SOUND		= 1				;This includes BOTH DPC+ 3 voice and digital samples requiring #AMPLITUDE; saves ~156 bytes Atari-side, plus sample data
+_ENABLE_POS_TABLE		= 1				;160 byte table for object positioning
+
+;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@ User Constants
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
@@ -108,7 +123,7 @@ OVERSCAN_TIMER_50		= 75
 	SEG.U VARS
 	org $80
 
-tv_type						ds 1		;<FRAMEWORK>
+tv_type						ds 1		;<FRAMEWORK>		if auto-detect disabled this becomes a manually set variable
 
 kernel						ds 1		;<FRAMEWORK>
 sound_mode					ds 1		;<FRAMEWORK>
@@ -122,6 +137,7 @@ audv1						ds 1		;<FRAMEWORK>
 audc1						ds 1		;<FRAMEWORK>
 audf1						ds 1		;<FRAMEWORK>
 
+	if (_ENABLE_SAVEKEY == 1)
 sk_command					ds 1		;<SaveKey>	holds current command from ARM
 sk_detect					ds 1		;<SaveKey>	0- SaveKey not found; 1- SaveKey detected
 sk_addr_l					ds 1		;<SaveKey>	
@@ -129,6 +145,7 @@ sk_addr_h					ds 1		;<SaveKey>
 sk_count					ds 1		;<SaveKey>	bytes to copy 1-64
 sk_offset					ds 1		;<SaveKey>	start offset into sk_RAM 0-63
 sk_RAM						ds 64		;<SaveKey>
+	endif
 
 jump_code_RAM				ds 1		;dedicated area of RAM for bank routine jumping/calling	<FRAMEWORK>
 jump_code_RAM_t_bank		ds 3		;cmp SelectBankX										<FRAMEWORK>
@@ -153,7 +170,9 @@ _SWCHA						ds 1			; <FRAMEWORK>
 _SWCHB						ds 1			; <FRAMEWORK>
 _INPT4						ds 1			; <FRAMEWORK>
 _INPT5						ds 1			; <FRAMEWORK>
+	if (_ENABLE_SAVEKEY == 1)
 _SK_DETECT					ds 1			; <SaveKey>
+	endif
 
 	align 2
 
@@ -166,13 +185,14 @@ _AUDV1						ds 1			; <FRAMEWORK>
 _AUDC1						ds 1			; <FRAMEWORK>
 _AUDF1						ds 1			; <FRAMEWORK>
 
+	if (_ENABLE_SAVEKEY == 1)
 _save_command				ds 1			; <SaveKey>
 _save_count					ds 1			; <SaveKey>
 _save_addr_l				ds 1			; <SaveKey>
 _save_addr_h				ds 1			; <SaveKey>
 _save_offset				ds 1			; <SaveKey>
 _save_data					ds 64			; <SaveKey>
-
+	endif
 
 	align 4
 
@@ -183,10 +203,13 @@ _test_data					ds 1 ;;;;;TEMP
 			;state, flags, etc.
 
 	org $0100
+
+	if (_ENABLE_WAV_SOUND == 1)
 _waveforms					ds 256			;@@@@@ 256 Bytes: 8 Custom Waveforms (0-7) @@@@@
 
 _digital_sample				ds DS_SIZE		;@@@@@ 2048 Bytes: Digital Sound Sample (ROM_SIZE >= 64) @@@@@
 						;@@@@@ playback access via waveform ID 8 @@@@@
+	endif
 
 _buffer0					ds 192			;@@@@@ 16x 192 Byte DS Channels @@@@@
 _buffer1					ds 192
@@ -274,25 +297,11 @@ _jump_table_2				ds 384
 CDFJPLUS_DRIVER:
 
 	incbin "./cdfjplus48_p1.bin"
-
-	if FF_LDX = 0
-	.byte #$a9		;lda #imm
-	else
-	.byte #$a2		;ldx #imm
-	endif
-
+	.byte FF_LDX
 	incbin "./cdfjplus48_p2.bin"
-
-	if FF_LDY = 0
-	.byte #$a9		;lda #imm
-	else
-	.byte #$a0		;ldy #imm
-	endif
-
+	.byte FF_LDY
 	incbin "./cdfjplus48_p3.bin"
-
 	.byte #FF_OFFSET
-
 	incbin "./cdfjplus48_p4.bin"
 
 
@@ -303,122 +312,41 @@ CDFJPLUS_DRIVER_SIZE = [* - CDFJPLUS_DRIVER]d
 
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-;@ Bank 0 - Startup bank
+;@ Bank Setup
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-CURRENT_BANK set $0800
-	ORG CURRENT_BANK
 
 	.include "bank_0.asm"
 
-	if C_START = $1800
-	org $1800
-	rorg $1800
-
-	else
-
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-;@ Bank 1
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-CURRENT_BANK set $1800
-	ORG CURRENT_BANK
-
+	if C_START > $1800
 	.include "bank_1.asm"
+	endif
 
-	if C_START = $2800
-	org $2800
-	rorg $2800
-
-	else
-
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-;@ Bank 2
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-CURRENT_BANK set $2800
-	ORG CURRENT_BANK
-
+	if C_START > $2800
 	.include "bank_2.asm"
+	endif 
 
-	if C_START = $3800
-	org $3800
-	rorg $3800
-
-	else
-
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-;@ Bank 3
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-CURRENT_BANK set $3800
-	ORG CURRENT_BANK
-
+	if C_START > $3800
 	.include "bank_3.asm"
+	endif
 
-	if C_START = $4800
-	org $4800
-	rorg $4800
-
-	else
-
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-;@ Bank 4
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-CURRENT_BANK set $4800
-	ORG CURRENT_BANK
-
+	if C_START > $4800
 	.include "bank_4.asm"
+	endif
 
-	if C_START = $5800
-	org $5800
-	rorg $5800
-
-	else
-
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-;@ Bank 5
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-CURRENT_BANK set $5800
-	ORG CURRENT_BANK
-
+	if C_START > $5800
 	.include "bank_5.asm"
+	endif 
 
-	if C_START = $6800
-	org $6800
-	rorg $6800
-
-	else
-
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-;@ Bank 6
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-CURRENT_BANK set $6800
-	ORG CURRENT_BANK
-
+	if C_START > $6800
 	.include "bank_6.asm"
-
-
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-;@ Bank 7 - when C_START = $7800
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-	org $7800
-	rorg $7800
-
 	endif
-	endif
-	endif
-	endif
-	endif
-	endif
-
+	
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@ C-Code
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+	org CURRENT_BANK
+	rorg CURRENT_BANK
 
 ; The Makefile creates a temporary 1-byte testarm.bin during the bootstrap pass,
 ; then rebuilds this file with the real ARM binary before the final DASM pass.
@@ -428,38 +356,54 @@ C_CODE:
 
 
 
-
-
 C_CODE_SIZE = * - C_CODE;
 	echo "---- C CODE uses", (C_CODE_SIZE)d, "bytes"
+
+
+
 
  
 	IF ROM_SIZE = 32
 	echo "----",($8000 - *) , "C CODE bytes free"
+	if ($8000 - *) > 0
 	org $7fff
+	.byte #$ff
+	endif
 	ENDIF
 
 	IF ROM_SIZE = 64
 	echo "----",($10000 - *) , "C CODE bytes free"
+	if ($10000 - *) > 0
 	org $ffff
+	.byte #$ff
+	endif
 	ENDIF
 
 	IF ROM_SIZE = 128
 	echo "----",($20000 - *) , "C CODE bytes free"
+	if ($20000 - *) > 0
 	org $1ffff
+	.byte #$ff
+	endif
 	ENDIF
 
 	IF ROM_SIZE = 256
 	echo "----",($40000 - *) , "C CODE bytes free"
+	if ($40000 - *) > 0
 	org $3ffff
+	.byte #$ff
+	endif
 	ENDIF
 
 	IF ROM_SIZE = 512
 	echo "----",($80000 - *) , "C CODE bytes free"
+	if ($80000 - *) > 0
 	org $7ffff
+	.byte #$ff
+	endif
 	ENDIF
 
-	.byte #$ff
+
 
 
     

@@ -31,7 +31,7 @@ BANK4_CODE_SIZE = * - BANK_4;
 	echo "---- BANK4", BANK4_CODE_SIZE, "bytes"
 	echo "---- BANK4", ($fff0 - *), "bytes free"
 
-
+CURRENT_BANK set CURRENT_BANK + $1000
 
 
 
