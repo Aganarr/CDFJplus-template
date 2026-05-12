@@ -11,6 +11,7 @@ blank_scanlines_3
 	bne blank_scanlines_3			;can use .blank_scanlines in any bank
 	rts
 
+	if (_ENABLE_WAV_SOUND == 1)
 blank_scanlines_aud_3				;can use .blank_scanlines_aud in any bank
 	sta WSYNC
 	lda #AMPLITUDE
@@ -18,6 +19,7 @@ blank_scanlines_aud_3				;can use .blank_scanlines_aud in any bank
 	dex
 	bne blank_scanlines_aud_3
 	rts
+	#endif
 ;@@@@@@@@@@@@@@@@@@@@@ These routines put at beginning of each bank so all have access @@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 

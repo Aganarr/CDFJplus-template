@@ -105,10 +105,10 @@ OVERSCAN_TIMER_50		= 75
 ;@ Feature Toggle Constants
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-_ENABLE_SAVEKEY			= 1				;saves 306 bytes Atari-side
-_ENABLE_TV_DETECT		= 1
-_ENABLE_WAV_SOUND		= 1				;This includes BOTH DPC+ 3 voice and digital samples requiring #AMPLITUDE; saves ~156 bytes Atari-side, plus sample data
-_ENABLE_POS_TABLE		= 1				;160 byte table for object positioning
+_ENABLE_SAVEKEY			= 0				;saves 306 bytes Atari-side
+_ENABLE_TV_DETECT		= 0
+_ENABLE_WAV_SOUND		= 0				;This includes BOTH DPC+ 3 voice and digital samples requiring #AMPLITUDE; saves ~156 bytes Atari-side, plus sample data
+_ENABLE_POS_TABLE		= 0				;160 byte table for object positioning
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@ User Constants
