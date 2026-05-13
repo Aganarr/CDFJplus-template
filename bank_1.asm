@@ -1,3 +1,5 @@
+	if C_START > $1800
+
 	org CURRENT_BANK
 	rorg $f000
 
@@ -19,7 +21,7 @@ blank_scanlines_aud_1				;can use .blank_scanlines_aud in any bank
 	dex
 	bne blank_scanlines_aud_1
 	rts
-	#endif
+	endif
 ;@@@@@@@@@@@@@@@@@@@@@ These routines put at beginning of each bank so all have access @@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
@@ -112,3 +114,5 @@ BANK1_CODE_SIZE = * - BANK_1;
 	echo "---- BANK1", ($fff0 - *), "bytes free"
 
 CURRENT_BANK set CURRENT_BANK + $1000
+
+	endif

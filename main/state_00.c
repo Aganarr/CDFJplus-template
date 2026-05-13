@@ -6,6 +6,15 @@
 
 /**************************** State 00 ****************************/
 // test game state 00 - TIA sound mode and SaveKey
+void S00_Init(void)
+{
+    kernel = KERNEL_TIA_SOUND;
+    sound_mode = _SND_MODE_TIA;
+#if (_ENABLE_WAV_SOUND == 1)
+    //      SilenceWaves();
+#endif
+}
+
 void S00_VBlank(void)
 {
     RAM[_buffer0] = frame;
@@ -25,9 +34,7 @@ void S00_Over(void)
 #if (_ENABLE_WAV_SOUND == 1)
     if (p0_r) // right to change to digital sample sound mode
     {
-        kernel = KERNEL_SAMPLE_SOUND;
-        game_state = STATE_SAMPLE_SOUND;
-        sound_mode = _SND_MODE_SAMPLE;
+        change_state = STATE_01_SAMPLE_SOUND;
     }
 #endif
 

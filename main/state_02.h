@@ -10,6 +10,8 @@
 // and include main.h
 #include "main.h"
 
+void S02_Init(void);
+
 void S02_VBlank(void);
 
 void S02_Over(void);

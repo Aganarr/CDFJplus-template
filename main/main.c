@@ -32,10 +32,11 @@ const unsigned char waveforms[] __attribute__((aligned(4))) = {
 /******************************* Variables *******************************/
 
 // stay ARM-side
-unsigned int rand = 10531789;                // 32 bit LFSR random number
-unsigned int frame = 0;                      // frame counter
-unsigned short game_state = STATE_TIA_SOUND; // internal ARM game state
-short sample_size = 0;                       // current digital sample size (bytes)
+unsigned int rand = 10531789;                     // 32 bit LFSR random number
+unsigned int frame = 0;                           // frame counter
+unsigned short game_state = SHRT_MAX;             // internal ARM game state - do not change this during frame
+unsigned short change_state = STATE_00_TIA_SOUND; // desired game state - alter this during frame
+short sample_size = 0;                            // current digital sample size (bytes)
 
 #if (_ENABLE_SAVEKEY == 1)
 bool save_key_detected = false; // save key present flag
@@ -63,6 +64,8 @@ static void Initialize();
 static void VBlank();
 static void Overscan();
 
+static void StateChange();
+
 static void HandleControls();
 
 /******************************* External Functions *******************************/
@@ -74,28 +77,33 @@ extern void ClearChannel(void *ptr);
 extern void MemCopy32(void *ptr1, const void *ptr2, unsigned int count);
 extern void Random(unsigned int count);
 
+// ARM Main handler function names
+void (*const VectorMain[])() = {Initialize, VBlank, Overscan};
+// Add ARM Init handler function names here - in final game these should change to reflect names of game states
+void (*const VectorInit[])() = {S00_Init, S01_Init, S02_Init};
+// Add ARM VBlank handler function names here - in final game these should change to reflect names of game states
+void (*const VectorVBlank[])() = {S00_VBlank, S01_VBlank, S02_VBlank};
+// Add ARM Overscan handler function names here - in final game these should change to reflect names of game states
+void (*const VectorOverscan[])() = {S00_Over, S01_Over, S02_Over};
+
 /******************************* Entry Point *******************************/
 int main()
 {
+    (*VectorMain[RAM[_C_routine]])();
+    return 0;
+}
 
-    switch (RAM[_C_routine])
+static void StateChange()
+{
+    if (game_state != change_state)
     {
-    case _ARM_INIT:
-        Initialize();
-        frame += 1;
-        break;
-    case _ARM_VBLANK:
-        VBlank();
-        break;
-    case _ARM_OVERSCAN:
-        Overscan();
-        frame += 1;
-        break;
-    default:
-        break;
+        game_state = change_state;
+        (*VectorInit[game_state])();
     }
 
-    return 0;
+    RAM[_kernel] = kernel;
+    RAM[_sound_mode] = sound_mode;
+    setPointer(DS31PTR, _kernel);
 }
 
 static void Initialize()
@@ -121,9 +129,7 @@ static void Initialize()
         }
         RAM_2B[(_jump_table_1 / 2) + 191] = _kernel_01_done;
 
-        RAM[_kernel] = kernel;
-        RAM[_sound_mode] = sound_mode;
-        setPointer(DS31PTR, _kernel); // pass initial state to Atari
+        StateChange();
 
 #if (_ENABLE_WAV_SOUND == 1)
         SilenceWaves(); // init DPC waveforms
@@ -181,12 +187,9 @@ static void Initialize()
     default:
         break;
     }
+
+    frame += 1;
 }
-
-// Add ARM VBlank handler function names here
-void (*const VectorVBlank[])() = {S00_VBlank, S01_VBlank, S02_VBlank
-
-};
 
 // VBlank dispatcher - includes sample end handler
 static void VBlank()
@@ -203,11 +206,6 @@ static void VBlank()
     }
 }
 
-// Add ARM Overscan handler function names here
-void (*const VectorOverscan[])() = {S00_Over, S01_Over, S02_Over
-
-};
-
 // Overscan dispatcher - includes control handler and communication to Atari
 static void Overscan()
 {
@@ -220,10 +218,9 @@ static void Overscan()
     (*VectorOverscan[game_state])();
 
     Random(1);
+    frame += 1;
 
-    RAM[_kernel] = kernel;
-    RAM[_sound_mode] = sound_mode;
-    setPointer(DS31PTR, _kernel);
+    StateChange();
 }
 
 /******************************* Handle Controls/Switches *******************************/

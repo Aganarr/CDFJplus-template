@@ -6,6 +6,15 @@
 
 /**************************** State 01 ****************************/
 // test game state 01 - digital sample sound mode
+void S01_Init(void)
+{
+    kernel = KERNEL_SAMPLE_SOUND;
+    sound_mode = _SND_MODE_SAMPLE;
+#if (_ENABLE_WAV_SOUND == 1)
+    SilenceWaves();
+#endif
+}
+
 void S01_VBlank(void)
 {
     RAM[_buffer0] -= 1;
@@ -21,22 +30,12 @@ void S01_Over(void)
 {
     if (p0_l) // left to change to TIA sound mode
     {
-        game_state = STATE_TIA_SOUND;
-        kernel = KERNEL_TIA_SOUND;
-        sound_mode = _SND_MODE_TIA;
-#if (_ENABLE_WAV_SOUND == 1)
-        SilenceWaves();
-#endif
+        change_state = STATE_00_TIA_SOUND;
     }
 
     if (p0_r) // right to change to DPC sound mode
     {
-        kernel = KERNEL_SAMPLE_SOUND;
-        game_state = STATE_DPC_SOUND;
-        sound_mode = _SND_MODE_DPC;
-#if (_ENABLE_WAV_SOUND == 1)
-        SilenceWaves();
-#endif
+        change_state = STATE_02_DPC_SOUND;
     }
 
 #if (_ENABLE_WAV_SOUND == 1)

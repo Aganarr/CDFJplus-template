@@ -6,7 +6,7 @@
 ;@ 
 ;@ Many thanks to John (johnnywc) for seeding this project
 ;@ to JetSetIlly for helping iron out digital samples
-;@ and Andrew Davie for a bunch of cross-platform assistance
+;@ and Andrew Davie for a bunch of cross-platform assistance - like A LOT
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 	PROCESSOR 6502
@@ -34,7 +34,7 @@ FF_Y_OFF				= $a9	;DO NOT CHANGE
 ;@		512		9472		;256B sys + 256B wav + 2048B Digital Sample buffer + 32 * 192B DS Channels + 2 * 384B Jump Channels = 9472
 ;@
 ;@@@@@@@@
-ROM_SIZE				= 64			
+ROM_SIZE				= 64
 DISPLAY_SIZE			= 6400
 ;@@@@@@@@
 ;@
@@ -105,10 +105,15 @@ OVERSCAN_TIMER_50		= 75
 ;@ Feature Toggle Constants
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-_ENABLE_SAVEKEY			= 0				;saves 306 bytes Atari-side
-_ENABLE_TV_DETECT		= 0
-_ENABLE_WAV_SOUND		= 0				;This includes BOTH DPC+ 3 voice and digital samples requiring #AMPLITUDE; saves ~156 bytes Atari-side, plus sample data
-_ENABLE_POS_TABLE		= 0				;160 byte table for object positioning
+_ENABLE_SAVEKEY			= 1				;saves 306 bytes Atari-side
+_ENABLE_TV_DETECT		= 1
+_ENABLE_WAV_SOUND		= 1				;This includes BOTH DPC+ 3 voice and digital samples requiring #AMPLITUDE; saves ~156 bytes Atari-side, plus sample data
+_ENABLE_POS_TABLE		= 1				;160 byte table for object positioning
+_ENABLE_TIA_SOUND		= 1				;use if only doing WAV sound mode
+
+	if (_ENABLE_TIA_SOUND == 0) && (_ENABLE_WAV_SOUND == 0)
+_ENABLE_TIA_SOUND		= 1
+	endif
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@ User Constants
@@ -285,7 +290,6 @@ _jump_table_2				ds 384
 ;@ $7800 - $87ff Bank 7, ARM C-code and data
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-
         
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@ CDF driver - The Harmony/Melody driver is located at Start of Cartridge ROM    
@@ -294,7 +298,7 @@ _jump_table_2				ds 384
 	SEG CODE
 	org $0000
     
-CDFJPLUS_DRIVER:
+CDFJPLUS_DRIVER
 
 	incbin "./cdfjplus48_p1.bin"
 	.byte FF_LDX
@@ -308,38 +312,17 @@ CDFJPLUS_DRIVER:
 CDFJPLUS_DRIVER_SIZE = [* - CDFJPLUS_DRIVER]d
 	echo "---- CDFJPLUS DRIVER SIZE", CDFJPLUS_DRIVER_SIZE, "bytes"
 
-
-
-
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@ Bank Setup
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-	.include "bank_0.asm"
-
-	if C_START > $1800
-	.include "bank_1.asm"
-	endif
-
-	if C_START > $2800
-	.include "bank_2.asm"
-	endif 
-
-	if C_START > $3800
-	.include "bank_3.asm"
-	endif
-
-	if C_START > $4800
-	.include "bank_4.asm"
-	endif
-
-	if C_START > $5800
-	.include "bank_5.asm"
-	endif 
-
-	if C_START > $6800
-	.include "bank_6.asm"
-	endif
+	include "bank_0.asm"		;always included, Atari ASM begins here
+	include "bank_1.asm"		;available when C_START > $1800
+	include "bank_2.asm"		;available when C_START > $2800
+	include "bank_3.asm"		;available when C_START > $3800
+	include "bank_4.asm"		;available when C_START > $4800
+	include "bank_5.asm"		;available when C_START > $5800
+	include "bank_6.asm"		;available when C_START > $6800
 	
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@ C-Code
@@ -350,58 +333,20 @@ CDFJPLUS_DRIVER_SIZE = [* - CDFJPLUS_DRIVER]d
 
 ; The Makefile creates a temporary 1-byte testarm.bin during the bootstrap pass,
 ; then rebuilds this file with the real ARM binary before the final DASM pass.
-C_CODE:
-	INCBIN "main/bin/armcode.bin"
+C_CODE
+	incbin "main/bin/armcode.bin"
 
-
-
-
-C_CODE_SIZE = * - C_CODE;
+C_CODE_SIZE = * - C_CODE
 	echo "---- C CODE uses", (C_CODE_SIZE)d, "bytes"
 
-
-
-
+BYTE_SIZE = ROM_SIZE * $400
+	echo "----",(BYTE_SIZE - *) , "C CODE bytes free"
+	if (BYTE_SIZE - *) > 0
+	org BYTE_SIZE - 1
+	.byte $ff
+	endif
  
-	IF ROM_SIZE = 32
-	echo "----",($8000 - *) , "C CODE bytes free"
-	if ($8000 - *) > 0
-	org $7fff
-	.byte #$ff
-	endif
-	ENDIF
 
-	IF ROM_SIZE = 64
-	echo "----",($10000 - *) , "C CODE bytes free"
-	if ($10000 - *) > 0
-	org $ffff
-	.byte #$ff
-	endif
-	ENDIF
-
-	IF ROM_SIZE = 128
-	echo "----",($20000 - *) , "C CODE bytes free"
-	if ($20000 - *) > 0
-	org $1ffff
-	.byte #$ff
-	endif
-	ENDIF
-
-	IF ROM_SIZE = 256
-	echo "----",($40000 - *) , "C CODE bytes free"
-	if ($40000 - *) > 0
-	org $3ffff
-	.byte #$ff
-	endif
-	ENDIF
-
-	IF ROM_SIZE = 512
-	echo "----",($80000 - *) , "C CODE bytes free"
-	if ($80000 - *) > 0
-	org $7ffff
-	.byte #$ff
-	endif
-	ENDIF
 
 
 

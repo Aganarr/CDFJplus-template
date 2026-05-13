@@ -1,3 +1,5 @@
+	if C_START > $3800
+	
 	org CURRENT_BANK
 	rorg $f000
 
@@ -19,7 +21,7 @@ blank_scanlines_aud_3				;can use .blank_scanlines_aud in any bank
 	dex
 	bne blank_scanlines_aud_3
 	rts
-	#endif
+	endif
 ;@@@@@@@@@@@@@@@@@@@@@ These routines put at beginning of each bank so all have access @@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
@@ -35,7 +37,7 @@ BANK3_CODE_SIZE = * - BANK_3;
 
 CURRENT_BANK set CURRENT_BANK + $1000
 
-
+	endif
 
 
 

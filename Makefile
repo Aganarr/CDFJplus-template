@@ -250,7 +250,7 @@ arm:
 $(BUILD)/main.o: $(BASE)/$(DASM_TO_C)
 $(BUILD)/defines_cdfjplus.o: $(BASE)/$(DASM_TO_C)
 
-$(BUILD)/%.o: %.c
+$(BUILD)/%.o: %.c %.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD)/%.o: %.s

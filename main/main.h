@@ -54,9 +54,9 @@ enum KERNEL {
 
 // Controls which VB and OS are run
 enum GAME_STATE {
-    STATE_TIA_SOUND,        // 0
-    STATE_SAMPLE_SOUND,     // 1
-    STATE_DPC_SOUND         // 2
+    STATE_00_TIA_SOUND,        // 0
+    STATE_01_SAMPLE_SOUND,     // 1
+    STATE_02_DPC_SOUND         // 2
     
 
 };
@@ -69,7 +69,7 @@ enum GAME_STATE {
 // stay ARM-side
 extern unsigned int rand;                   // 32 bit LFSR random number
 extern unsigned int frame;                  // frame counter
-extern unsigned short game_state;           // internal ARM game state
+extern unsigned short change_state;         // desired game state - alter this during frame
 extern short sample_size;                   // current digital sample size (bytes)
 extern bool save_key_detected;              // save key present flag
 extern unsigned char tv_color;              // code initialized, user overridable TV color
