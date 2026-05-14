@@ -73,6 +73,8 @@ extern unsigned short change_state;         // desired game state - alter this d
 extern short sample_size;                   // current digital sample size (bytes)
 extern bool save_key_detected;              // save key present flag
 extern unsigned char tv_color;              // code initialized, user overridable TV color
+extern bool genesis_p0;                     // flag for genesis controller first player
+extern bool genesis_p1;                     // flag for genesis controller second player
 
 
 // to Atari-side
@@ -82,7 +84,7 @@ extern unsigned short save_key_address;     // replace with whatever address des
 
 // Atari input direct access variables - joysticks and RESET/SELECT are
 // automatically wait/repeat handled
-extern bool input_flag[15];
+extern bool input_flag[17];
 #define p1_u input_flag[0]
 #define p1_d input_flag[1]
 #define p1_l input_flag[2]
@@ -102,7 +104,7 @@ extern bool input_flag[15];
 // for each control user can assign a number of frames in between
 // the first press acknowledge and the second, default 14
 // use 0 to bypass the wait timer
-extern unsigned char input_wait[12];
+extern unsigned char input_wait[14];
 #define p1_u_wait input_wait[0]
 #define p1_d_wait input_wait[1]
 #define p1_l_wait input_wait[2]
@@ -119,7 +121,7 @@ extern unsigned char input_wait[12];
 // for each control user can assign a number of frames in between
 // the second acknowledge and any after, default 7
 // use 0 to bypass the repeat timer
-extern unsigned char input_repeat[12];
+extern unsigned char input_repeat[14];
 #define p1_u_repeat input_repeat[0]
 #define p1_d_repeat input_repeat[1]
 #define p1_l_repeat input_repeat[2]
@@ -132,10 +134,12 @@ extern unsigned char input_repeat[12];
 #define p1_b_repeat input_repeat[9]
 #define RESET_swch_repeat input_repeat[10]
 #define SELECT_swch_repeat input_repeat[11]
+#define p0_b2_repeat input_repeat[12]
+#define p1_b2_repeat input_repeat[13]
 
 // internal control handling variables - no need for direct user access
-extern unsigned short input_counter[12];
-extern unsigned short input_target[12];
+extern unsigned short input_counter[14];
+extern unsigned short input_target[14];
 
 
 // Any additional shared user variables here

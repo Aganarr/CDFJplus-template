@@ -16,7 +16,7 @@ blank_scanlines
 	if (_ENABLE_WAV_SOUND == 1)
 blank_scanlines_aud				;can use .blank_scanlines_aud in any bank
 	sta WSYNC
-	lda #AMPLITUDE
+	lda AMPLITUDE
 	sta AUDV0
 	dex
 	bne blank_scanlines_aud
@@ -130,6 +130,7 @@ skip_change_modes				;
 	bne main_game_loop_sampled	; standard TIA or sampled sound
 	endif
 
+	if (_ENABLE_TIA_SOUND == 1) || ((_ENABLE_TIA_SOUND == 0) && (_ENABLE_WAV_SOUND == 0))	;safety net in case BOTH get set to 0
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Game Loop - Standard Sounds @@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 main_game_loop_standard
@@ -194,6 +195,7 @@ wait_overscan_std
 	jmp main_game_loop
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Game Loop - Standard Sounds @@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+	endif
 
 	if (_ENABLE_WAV_SOUND == 1)
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -358,6 +360,10 @@ overscan_ARM
 	stx DSWRITE
 	ldx INPT5
 	stx DSWRITE						;all Atari inputs to ARM
+	ldx INPT1
+	stx DSWRITE
+	ldx INPT3
+	stx DSWRITE
 
 	if (_ENABLE_SAVEKEY == 1)
 	ldx sk_detect					;<SaveKey>
@@ -464,28 +470,28 @@ skip_save_key_operation
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@ Cross Bank Routine Handler @@@@@@@@@@@@@@@@@@@@@@@@@
 call_bank_routine
-	lda jump_table_target_bank,x
-	sta jump_code_RAM_t_bank
+	lda jump_table_target_bank,x				;RAM in the jump code area gets modified
+	sta jump_code_RAM_t_bank					;with target bank
 call_bank_routine_sans_bank
 	lda jump_table_target_routine_l,x
-	sta jump_code_RAM_t_r_l
+	sta jump_code_RAM_t_r_l						;and low and
 	lda jump_table_target_routine_h,x
-	sta jump_code_RAM_t_r_h
-	jmp jump_code_RAM
+	sta jump_code_RAM_t_r_h						;high byte of target routine
+	jmp jump_code_RAM							;will return to THIS routine's caller
 ;@@@@@@@@@@@@@@@@@@@@
 
 jump_table_target_bank			;kernel routines can be located anywhere on any bank
-	.byte #<BANK1
-	.byte #<BANK1
+	.byte <BANK1
+	.byte <BANK1
 
 jump_table_target_routine_l		;each routine gets an entry in the table set
-	.byte #<kernel_00
-	.byte #<kernel_01
+	.byte <kernel_00
+	.byte <kernel_01
 
 jump_table_target_routine_h
 ROUTINE_KERNEL_00 = * - jump_table_target_routine_h	;use this method to create names for manual routine calling
-	.byte #>kernel_00
-	.byte #>kernel_01
+	.byte >kernel_00
+	.byte >kernel_01
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@ Cross Bank Routine Handler @@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -726,177 +732,177 @@ loop_position_p1_2			;
 
 calc_rpfp_table		;RoughPosition/FinePosition table for position method [22]
 	if (_ENABLE_POS_TABLE == 1)
-	.byte #%00110000
-	.byte #%00100000
-	.byte #%00010000
-	.byte #%00000000
-	.byte #%11110000
-	.byte #%11100000
-	.byte #%11010000
-	.byte #%11000000
-	.byte #%10110000
-	.byte #%10100000
-	.byte #%10010000
+	.byte %00110000
+	.byte %00100000
+	.byte %00010000
+	.byte %00000000
+	.byte %11110000
+	.byte %11100000
+	.byte %11010000
+	.byte %11000000
+	.byte %10110000
+	.byte %10100000
+	.byte %10010000
 
-	.byte #%01110001
-	.byte #%01100001
-	.byte #%01010001
-	.byte #%01000001
-	.byte #%00110001
-	.byte #%00100001
-	.byte #%00010001
-	.byte #%00000001
-	.byte #%11110001
-	.byte #%11100001
-	.byte #%11010001
-	.byte #%11000001
-	.byte #%10110001
-	.byte #%10100001
-	.byte #%10010001
+	.byte %01110001
+	.byte %01100001
+	.byte %01010001
+	.byte %01000001
+	.byte %00110001
+	.byte %00100001
+	.byte %00010001
+	.byte %00000001
+	.byte %11110001
+	.byte %11100001
+	.byte %11010001
+	.byte %11000001
+	.byte %10110001
+	.byte %10100001
+	.byte %10010001
 
-	.byte #%01110010
-	.byte #%01100010
-	.byte #%01010010
-	.byte #%01000010
-	.byte #%00110010
-	.byte #%00100010
-	.byte #%00010010
-	.byte #%00000010
-	.byte #%11110010
-	.byte #%11100010
-	.byte #%11010010
-	.byte #%11000010
-	.byte #%10110010
-	.byte #%10100010
-	.byte #%10010010
+	.byte %01110010
+	.byte %01100010
+	.byte %01010010
+	.byte %01000010
+	.byte %00110010
+	.byte %00100010
+	.byte %00010010
+	.byte %00000010
+	.byte %11110010
+	.byte %11100010
+	.byte %11010010
+	.byte %11000010
+	.byte %10110010
+	.byte %10100010
+	.byte %10010010
 
-	.byte #%01110011
-	.byte #%01100011
-	.byte #%01010011
-	.byte #%01000011
-	.byte #%00110011
-	.byte #%00100011
-	.byte #%00010011
-	.byte #%00000011
-	.byte #%11110011
-	.byte #%11100011
-	.byte #%11010011
-	.byte #%11000011
-	.byte #%10110011
-	.byte #%10100011
-	.byte #%10010011
+	.byte %01110011
+	.byte %01100011
+	.byte %01010011
+	.byte %01000011
+	.byte %00110011
+	.byte %00100011
+	.byte %00010011
+	.byte %00000011
+	.byte %11110011
+	.byte %11100011
+	.byte %11010011
+	.byte %11000011
+	.byte %10110011
+	.byte %10100011
+	.byte %10010011
 
-	.byte #%01110100
-	.byte #%01100100
-	.byte #%01010100
-	.byte #%01000100
-	.byte #%00110100
-	.byte #%00100100
-	.byte #%00010100
-	.byte #%00000100
-	.byte #%11110100
-	.byte #%11100100
-	.byte #%11010100
-	.byte #%11000100
-	.byte #%10110100
-	.byte #%10100100
-	.byte #%10010100
+	.byte %01110100
+	.byte %01100100
+	.byte %01010100
+	.byte %01000100
+	.byte %00110100
+	.byte %00100100
+	.byte %00010100
+	.byte %00000100
+	.byte %11110100
+	.byte %11100100
+	.byte %11010100
+	.byte %11000100
+	.byte %10110100
+	.byte %10100100
+	.byte %10010100
 
-	.byte #%01110101
-	.byte #%01100101
-	.byte #%01010101
-	.byte #%01000101
-	.byte #%00110101
-	.byte #%00100101
-	.byte #%00010101
-	.byte #%00000101
-	.byte #%11110101
-	.byte #%11100101
-	.byte #%11010101
-	.byte #%11000101
-	.byte #%10110101
-	.byte #%10100101
-	.byte #%10010101
+	.byte %01110101
+	.byte %01100101
+	.byte %01010101
+	.byte %01000101
+	.byte %00110101
+	.byte %00100101
+	.byte %00010101
+	.byte %00000101
+	.byte %11110101
+	.byte %11100101
+	.byte %11010101
+	.byte %11000101
+	.byte %10110101
+	.byte %10100101
+	.byte %10010101
 
-	.byte #%01110110
-	.byte #%01100110
-	.byte #%01010110
-	.byte #%01000110
-	.byte #%00110110
-	.byte #%00100110
-	.byte #%00010110
-	.byte #%00000110
-	.byte #%11110110
-	.byte #%11100110
-	.byte #%11010110
-	.byte #%11000110
-	.byte #%10110110
-	.byte #%10100110
-	.byte #%10010110
+	.byte %01110110
+	.byte %01100110
+	.byte %01010110
+	.byte %01000110
+	.byte %00110110
+	.byte %00100110
+	.byte %00010110
+	.byte %00000110
+	.byte %11110110
+	.byte %11100110
+	.byte %11010110
+	.byte %11000110
+	.byte %10110110
+	.byte %10100110
+	.byte %10010110
 
-	.byte #%01110111
-	.byte #%01100111
-	.byte #%01010111
-	.byte #%01000111
-	.byte #%00110111
-	.byte #%00100111
-	.byte #%00010111
-	.byte #%00000111
-	.byte #%11110111
-	.byte #%11100111
-	.byte #%11010111
-	.byte #%11000111
-	.byte #%10110111
-	.byte #%10100111
-	.byte #%10010111
+	.byte %01110111
+	.byte %01100111
+	.byte %01010111
+	.byte %01000111
+	.byte %00110111
+	.byte %00100111
+	.byte %00010111
+	.byte %00000111
+	.byte %11110111
+	.byte %11100111
+	.byte %11010111
+	.byte %11000111
+	.byte %10110111
+	.byte %10100111
+	.byte %10010111
 
-	.byte #%01111000
-	.byte #%01101000
-	.byte #%01011000
-	.byte #%01001000
-	.byte #%00111000
-	.byte #%00101000
-	.byte #%00011000
-	.byte #%00001000
-	.byte #%11111000
-	.byte #%11101000
-	.byte #%11011000
-	.byte #%11001000
-	.byte #%10111000
-	.byte #%10101000
-	.byte #%10011000
+	.byte %01111000
+	.byte %01101000
+	.byte %01011000
+	.byte %01001000
+	.byte %00111000
+	.byte %00101000
+	.byte %00011000
+	.byte %00001000
+	.byte %11111000
+	.byte %11101000
+	.byte %11011000
+	.byte %11001000
+	.byte %10111000
+	.byte %10101000
+	.byte %10011000
 
-	.byte #%01111001
-	.byte #%01101001
-	.byte #%01011001
-	.byte #%01001001
-	.byte #%00111001
-	.byte #%00101001
-	.byte #%00011001
-	.byte #%00001001
-	.byte #%11111001
-	.byte #%11101001
-	.byte #%11011001
-	.byte #%11001001
-	.byte #%10111001
-	.byte #%10101001
-	.byte #%10011001
+	.byte %01111001
+	.byte %01101001
+	.byte %01011001
+	.byte %01001001
+	.byte %00111001
+	.byte %00101001
+	.byte %00011001
+	.byte %00001001
+	.byte %11111001
+	.byte %11101001
+	.byte %11011001
+	.byte %11001001
+	.byte %10111001
+	.byte %10101001
+	.byte %10011001
 
-	.byte #%01111010
-	.byte #%01101010
-	.byte #%01011010
-	.byte #%01001010
-	.byte #%00111010
-	.byte #%00101010
-	.byte #%00011010
-	.byte #%00001010
-	.byte #%11111010
-	.byte #%11101010
-	.byte #%11011010
-	.byte #%11001010
-	.byte #%10111010
-	.byte #%10101010
-	.byte #%10011010
+	.byte %01111010
+	.byte %01101010
+	.byte %01011010
+	.byte %01001010
+	.byte %00111010
+	.byte %00101010
+	.byte %00011010
+	.byte %00001010
+	.byte %11111010
+	.byte %11101010
+	.byte %11011010
+	.byte %11001010
+	.byte %10111010
+	.byte %10101010
+	.byte %10011010
 
 ;@@@@@@@@@@@@@@@@@@@@@@@ Positioning Table @@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@

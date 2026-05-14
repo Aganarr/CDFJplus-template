@@ -45,6 +45,9 @@ bool save_key_detected = false; // save key present flag
 unsigned char tv_type = _TV_TYPE_60HZ; // code detected TV frequency type
 unsigned char tv_color = NTSC;         // user driven TV color
 
+extern bool genesis_p0 = false; // flag for genesis controller first player
+extern bool genesis_p1 = false; // flag for genesis controller second player
+
 unsigned char TranslatePalColor[] = {0x00, 0x20, 0x20, 0x40, 0x60, 0x80, 0xA0, 0xC0, 0xD0, 0xB0, 0x90, 0x50, 0x70, 0x30, 0x20, 0x40};
 unsigned char TranslateSecamColor[] = {0x0, 0xE, 0xC, 0x4, 0x4, 0x6, 0x6, 0x2, 0x2, 0x2, 0x8, 0x8, 0x8, 0x8, 0xC, 0xC};
 
@@ -53,11 +56,11 @@ unsigned char kernel = 0;                 // drawing kernel used/passed Atari-si
 unsigned char sound_mode = _SND_MODE_TIA; // sound mode used/passed Atari-side
 unsigned short save_key_address = 0x2600; // replace with whatever address desired
 
-bool input_flag[15] = {false, false, false, false, false, false, false, false, false, false, false, false, false, false, false};
-unsigned char input_wait[12] = {14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14};
-unsigned char input_repeat[12] = {7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7};
-unsigned short input_counter[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-unsigned short input_target[12];
+bool input_flag[17] = {false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false};
+unsigned char input_wait[14] = {14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14};
+unsigned char input_repeat[14] = {7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7};
+unsigned short input_counter[14] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+unsigned short input_target[14];
 
 /******************************* Framework Functions *******************************/
 static void Initialize();
@@ -236,12 +239,22 @@ static void HandleControls()
         SWCH_input |= 0x0400;
     if ((RAM[_SWCHB] & 0b00000010) != 0)
         SWCH_input |= 0x0800;
+    if ((RAM[_INPT1] & 0b10000000) != 0)
+    {
+        SWCH_input |= 0x1000;
+        genesis_p0 = true;
+    }
+    if ((RAM[_INPT3] & 0b10000000) != 0)
+    {
+        SWCH_input |= 0x2000;
+        genesis_p1 = true;
+    }
 
     CBW_swch = ((RAM[_SWCHB] & 0b00001000) != 0);
     P0_diff = ((RAM[_SWCHB] & 0b01000000) != 0);
     P1_diff = ((RAM[_SWCHB] & 0b10000000) != 0);
 
-    for (int i = 0; i <= 11; i++)
+    for (int i = 0; i <= 13; i++)
     {
         input_flag[i] = false;
         if ((SWCH_input & 1) == 0)

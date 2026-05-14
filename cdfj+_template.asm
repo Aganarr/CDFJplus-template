@@ -21,39 +21,35 @@ FF_Y_ON					= $a0	;DO NOT CHANGE
 FF_Y_OFF				= $a9	;DO NOT CHANGE
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-;@ ROM CONFIGURATION (READ THIS OR IT WILL BREAK)
+;@ ROM CONFIGURATION
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-;@ ROM_SIZE and DISPLAY_SIZE MUST BE CORRECT OR BUILD WILL FAIL
 ;@
-;@  ROM_SIZE   DISPLAY_SIZE (MINIMUM REQUIRED - May be increased for allocation of additional DD features, reducing available C RAM)
+;@  ROM_SIZE   AVAILABLE RAM (2048 used by CDFJ+ driver - remaining availavle for DD and C RAM)
 ;@  --------   ------------
-;@		32		4352		;256B sys + 256B wav + 16 * 192B DS Channels + 2 * 384B Jump Channels = 4352
-;@		64		6400		;256B sys + 256B wav + 2048B Digital Sample buffer + 16 * 192B DS Channels + 2 * 384B Jump Channels = 6400
-;@		128		6400		;256B sys + 256B wav + 2048B Digital Sample buffer + 16 * 192B DS Channels + 2 * 384B Jump Channels = 6400
-;@		256		9472		;256B sys + 256B wav + 2048B Digital Sample buffer + 32 * 192B DS Channels + 2 * 384B Jump Channels = 9472
-;@		512		9472		;256B sys + 256B wav + 2048B Digital Sample buffer + 32 * 192B DS Channels + 2 * 384B Jump Channels = 9472
+;@		32		8192
+;@		64		16384
+;@		128		16384
+;@		256		32768
+;@		512		32768
 ;@
 ;@@@@@@@@
-ROM_SIZE				= 64
-DISPLAY_SIZE			= 6400
+ROM_SIZE				= 32
+DISPLAY_SIZE			= 4096
 ;@@@@@@@@
 ;@
-;@ If you change ROM_SIZE, you MUST update DISPLAY_SIZE accordingly.
-;@ Framework auto-allocates additional Display Data features as
-;@ available RAM increases with larger ROMs
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 FF_LDX					= FF_X_ON		;Fast Fetch for LDX: FF_X_ON OR FF_X_OFF
 FF_LDY					= FF_Y_ON		;Fast Fetch for LDY: FF_Y_ON OR FF_Y_OFF
 FF_OFFSET				= 200			;Fast Fetch offset: 0 to 200
-C_START					= $7800			;$1800, $2800, $3800, $4800, $5800, $6800, $7800
-								; With current examples, C_START=$1800 will error because Bank1 contains 6507 routines.
-								; Move/remove those routines to Bank0 before starting ARM C at $1800.
+C_START					= $6800			;$1800, $2800, $3800, $4800, $5800, $6800, $7800
+										; With current examples, C_START=$1800 will error because Bank1 contains kernel routines.
+										; Move/remove those routines to Bank0 before starting ARM C at $1800.
 
-	INCLUDE "cdfjplus.h"		;cdfjplus.h must come AFTER system constants for FF_OFFSET to apply
+	INCLUDE "cdfjplus.h"				;cdfjplus.h must come AFTER system constants for FF_OFFSET to apply
 	INCLUDE "vcs.h"
-;	INCLUDE "macro.h"			;I personally do not use - but uncomment and use as you desire
-								; <WARNING> fast fetch macros may not work properly
+;	INCLUDE "macro.h"					;I personally do not use - but uncomment and use as you desire
+										; <WARNING> fast fetch macros may not work properly
 	INCLUDE "tia_constants.h"
 
 ;@@@@@ DO NOT CHANGE THE REMAINING SYSTEM CONSTANTS @@@@@
@@ -65,18 +61,12 @@ _DISPLAY_SIZE32			= DISPLAY_SIZE / 4
 	;C Stack Pointer - leave space for IAR at top of memory
 	if (ROM_SIZE == 32)
 C_STACK = $40001FDC
-DS_SIZE = 0						;auto-generate DS_SIZE and CH_SIZE
-CH_SIZE = 0						;for later use in DD RAM allocation
 	endif
 	if (ROM_SIZE == 64 || ROM_SIZE == 128)
-C_STACK = $40003FDC				;when ROM_SIZE = 64 or 128 RAM increases to 16k
-DS_SIZE = 2048					;allowing room for framework to enable the RAM digital sameple buffer
-CH_SIZE = 0						;but not yet the additional 16 Data Stream channels
+C_STACK = $40003FDC						;when ROM_SIZE = 64 or 128 RAM increases to 16k
 	endif
 	if (ROM_SIZE == 256 || ROM_SIZE == 512)
-C_STACK = $40007FDC				;when ROM_SIZE = 256 or 512 RAM increases to 32k
-DS_SIZE = 2048					;allowing room for framework to enable both the RAM digital sameple buffer
-CH_SIZE = 192					;and the additional 16 Data Stream channels
+C_STACK = $40007FDC						;when ROM_SIZE = 256 or 512 RAM increases to 32k
 	endif
 
 _SND_MODE_TIA			= 0
@@ -93,7 +83,7 @@ _SAVE_KEY_WRITE			= 128
 
 _TV_TYPE_60HZ			= 0
 _TV_TYPE_50HZ			= 1
-_DETECT_FRAME_COUNT		= 1			;can adjust this to however many initial test frames desired
+_DETECT_FRAME_COUNT		= 1				;can adjust this to however many initial test frames desired
 
 VBLANK_TIMER_60			= 43
 OVERSCAN_TIMER_60		= 35
@@ -105,15 +95,12 @@ OVERSCAN_TIMER_50		= 75
 ;@ Feature Toggle Constants
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-_ENABLE_SAVEKEY			= 1				;saves 306 bytes Atari-side
-_ENABLE_TV_DETECT		= 1
+_ENABLE_SAVEKEY			= 0				;saves 306 bytes Atari-side
+_ENABLE_TV_DETECT		= 0
 _ENABLE_WAV_SOUND		= 1				;This includes BOTH DPC+ 3 voice and digital samples requiring #AMPLITUDE; saves ~156 bytes Atari-side, plus sample data
 _ENABLE_POS_TABLE		= 1				;160 byte table for object positioning
-_ENABLE_TIA_SOUND		= 1				;use if only doing WAV sound mode
+_ENABLE_TIA_SOUND		= 0				;enable full TIA sound mode using both AUDx0 and AUDx1
 
-	if (_ENABLE_TIA_SOUND == 0) && (_ENABLE_WAV_SOUND == 0)
-_ENABLE_TIA_SOUND		= 1
-	endif
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@ User Constants
@@ -175,6 +162,8 @@ _SWCHA						ds 1			; <FRAMEWORK>
 _SWCHB						ds 1			; <FRAMEWORK>
 _INPT4						ds 1			; <FRAMEWORK>
 _INPT5						ds 1			; <FRAMEWORK>
+_INPT1						ds 1			; <FRAMEWORK>
+_INPT3						ds 1			; <FRAMEWORK>
 	if (_ENABLE_SAVEKEY == 1)
 _SK_DETECT					ds 1			; <SaveKey>
 	endif
@@ -212,46 +201,37 @@ _test_data					ds 1 ;;;;;TEMP
 	if (_ENABLE_WAV_SOUND == 1)
 _waveforms					ds 256			;@@@@@ 256 Bytes: 8 Custom Waveforms (0-7) @@@@@
 
-_digital_sample				ds DS_SIZE		;@@@@@ 2048 Bytes: Digital Sound Sample (ROM_SIZE >= 64) @@@@@
-						;@@@@@ playback access via waveform ID 8 @@@@@
-	endif
+_digital_sample				ds 2048			;@@@@@ 2048 Bytes: Digital Sound Sample @@@@@
+	endif									;@@@@@ playback access via waveform ID 8 @@@@@
 
-_buffer0					ds 192			;@@@@@ 16x 192 Byte DS Channels @@@@@
-_buffer1					ds 192
-_buffer2					ds 192
-_buffer3					ds 192
-_buffer4					ds 192
-_buffer5					ds 192
-_buffer6					ds 192
-_buffer7					ds 192
-_buffer8					ds 192
-_buffer9					ds 192
-_buffer10					ds 192
-_buffer11					ds 192
-_buffer12					ds 192
-_buffer13					ds 192
-_buffer14					ds 192
-_buffer15					ds 192
-
-_buffer16					ds CH_SIZE		;@@@@@ 16x additional 192 Byte DS Channels (ROM_SIZE >= 256) @@@@@
-_buffer17					ds CH_SIZE
-_buffer18					ds CH_SIZE
-_buffer19					ds CH_SIZE
-_buffer20					ds CH_SIZE
-_buffer21					ds CH_SIZE
-_buffer22					ds CH_SIZE
-_buffer23					ds CH_SIZE
-_buffer24					ds CH_SIZE
-_buffer25					ds CH_SIZE
-_buffer26					ds CH_SIZE
-_buffer27					ds CH_SIZE
-_buffer28					ds CH_SIZE
-_buffer29					ds CH_SIZE
-_buffer30					ds CH_SIZE
-_buffer31					ds CH_SIZE
+_BUFFER_START
+	seg.u DD_CONFIG_1						;at end od DD area one can also use an overlay to
+	org _BUFFER_START						;create multiple RAM "mappings" in the same space
 
 _jump_table_1				ds 384
 _jump_table_2				ds 384
+
+_buffer0					ds 192
+_buffer1					ds 192
+_buffer2					ds 192
+_buffer3					ds 192
+
+; Feel free to alter DD in any way you see fit.
+; If you don't use extended sound features, then eliminate _waveforms and _digital_sample
+; If you only need a single jump table, delete the seconds one.
+
+	seg.u DD_CONFIG_2
+	org _BUFFER_START
+
+_jump_table_A				ds 384
+
+_bufferA					ds 192
+_bufferB					ds 192
+_bufferC					ds 192
+_bufferD					ds 192
+_bufferE					ds 192
+_bufferF					ds 192
+
 
 
 	IF (* <= DISPLAY_SIZE)
@@ -331,7 +311,7 @@ CDFJPLUS_DRIVER_SIZE = [* - CDFJPLUS_DRIVER]d
 	org CURRENT_BANK
 	rorg CURRENT_BANK
 
-; The Makefile creates a temporary 1-byte testarm.bin during the bootstrap pass,
+; The Makefile creates a temporary 1-byte armcode.bin during the bootstrap pass,
 ; then rebuilds this file with the real ARM binary before the final DASM pass.
 C_CODE
 	incbin "main/bin/armcode.bin"
