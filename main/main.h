@@ -75,6 +75,9 @@ extern bool save_key_detected;              // save key present flag
 extern unsigned char tv_color;              // code initialized, user overridable TV color
 extern bool genesis_p0;                     // flag for genesis controller first player
 extern bool genesis_p1;                     // flag for genesis controller second player
+extern unsigned char rough_position;        // Position routine calculated RESxx loop value (15 color clock accurate positioning)
+extern unsigned char fine_position;         // Position routine calculated fine tune value (for HMxx registers)
+
 
 
 // to Atari-side
@@ -157,6 +160,19 @@ void playSample (unsigned short sample_id, unsigned int pitch);
 void playRomSample (unsigned short sample_id, unsigned int pitch);
 
 unsigned char convertColor(unsigned char color);
+
+
+
+/******************************* External Functions *******************************/
+
+// function defines from ASM_routines.s
+// these use ASM with unrolled loops to make them FAST
+// use/remove as desired
+extern void ClearChannel(void *ptr);
+extern void MemCopy32(void *ptr1, const void *ptr2, unsigned int count);
+extern void Random(unsigned int count);
+extern void calcPosition(unsigned char pos);
+
 
 /******************************* Shared User Functions *******************************/
 

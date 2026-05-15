@@ -37,6 +37,12 @@ kernel_00_loop				;kernel_00 shows a "standard" display loop
 	lda #DS0DATA
 	sta COLUBK
 
+	ldy #8
+	lda amp_table1,y
+	sta GRP0
+	lda amp_table2,y
+	sta GRP1	
+
 	dex
 	bne kernel_00_loop
 
@@ -44,7 +50,43 @@ kernel_00_loop				;kernel_00 shows a "standard" display loop
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Kernel 00 Routine @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
+;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+;@@@@@@@@@@@@@@@@@@@@@@@@@ Kernel 01 Prep @@@@@@@@@@@@@@@@@@@@@@@@@
+k_prep_01
 
+	sta WSYNC
+	lda #AMPLITUDE					;2
+	sta AUDV0						;3,5
+	sta $2d							;3,8 - delay code
+	lda #DS30DATA					;2,10
+	sta HMP0						;3,13
+	ldx #DS30DATA					;2,15
+loop_position_p0_k1
+	dex								;2,17
+	bpl loop_position_p0_k1			;2,19
+	sta RESP0						;3,22
+
+	sta WSYNC
+	lda #AMPLITUDE					;2
+	sta AUDV0						;3,5
+	sta $2d							;3,8 - delay code
+	lda #DS30DATA					;2,10
+	sta HMP1						;3,13
+	ldx #DS30DATA					;2,15
+loop_position_p1_k1
+	dex								;2,17
+	bpl loop_position_p1_k1			;2,19
+	sta RESP1						;3,22
+
+	sta WSYNC
+	sta HMOVE
+
+	sta WSYNC
+	sta HMCLR
+
+	rts
+;@@@@@@@@@@@@@@@@@@@@@@@@@ Kernel 01 Prep @@@@@@@@@@@@@@@@@@@@@@@@@
+;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Kernel 01 Routine @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@

@@ -82,7 +82,6 @@ done_memCopy32:
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
-
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 //@ Random - 32 bit LFSR
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -105,6 +104,37 @@ skip_rand_eor:
 	str r3, [r1]
 done_rand:
     bx      lr
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+//@ calcPosition - calculate the Rough/Fine values for object positioning
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+	.global calcPosition
+    .thumb
+    .thumb_func
+calcPosition:
+	mov		r1, #0
+	add		r0, r0, #4
+loop_calc_P_rough:
+	cmp		r0, #15
+	blo		done_calc_P_rough
+	sub		r0, r0, #15
+	add		r1, r1, #1
+	b		loop_calc_P_rough
+done_calc_P_rough:
+	ldr		r2, =finePositionTable
+	ldrb	r0, [r2, r0]
+	ldr		r2, =rough_position
+	strb	r1, [r2]
+	ldr		r2, =fine_position
+	strb	r0, [r2]
+	bx		lr
+
+finePositionTable:
+	.byte	0x70, 0x60, 0x50, 0x40, 0x30
+	.byte	0x20, 0x10, 0x00, 0xf0, 0xe0
+	.byte	0xd0, 0xc0, 0xb0, 0xa0, 0x90
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 

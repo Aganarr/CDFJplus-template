@@ -24,6 +24,7 @@ void S02_VBlank(void)
     }
     setPointer(DS0PTR, _buffer0);
     setPointer(DSJMP1PTR, _jump_table_1);
+    setPointer(DS30PTR, _buffer1);
 }
 
 void S02_Over(void)

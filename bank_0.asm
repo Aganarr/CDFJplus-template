@@ -318,21 +318,11 @@ vblank_ARM
 	ldx call_fn
 	stx CALLFN
 
-	ldx kernel						;after ARM VBlank dispatch kernel's prep routine
-	lda kernel_prep_table_h,x
-	pha
-	lda kernel_prep_table_l,x
-	pha
-	rts
-;@@@@@@@@@@@@@@@@@@@@
-
-kernel_prep_table_h
-	.byte #>(k_prep_00-1)
-	.byte #>(k_prep_01-1)
-
-kernel_prep_table_l
-	.byte #<(k_prep_00-1)
-	.byte #<(k_prep_01-1)
+	lda kernel
+	clc
+	adc KERNEL_PREP
+	tax
+	jmp call_bank_routine			;after ARM VBlank dispatch kernel's prep routine
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@ Handle VBlank ARM Call @@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -480,18 +470,31 @@ call_bank_routine_sans_bank
 	jmp jump_code_RAM							;will return to THIS routine's caller
 ;@@@@@@@@@@@@@@@@@@@@
 
-jump_table_target_bank			;kernel routines can be located anywhere on any bank
+jump_table_target_bank			;routines can be located anywhere on any bank
+;@@@@@ first banks for kernels (we want to be able to call these ASAP without math to kernel variable)
 	.byte <BANK1
+	.byte <BANK1
+;@@@@@ then kernel prep routine bank
+	.byte <BANK0
 	.byte <BANK1
 
 jump_table_target_routine_l		;each routine gets an entry in the table set
 	.byte <kernel_00
 	.byte <kernel_01
+;@@@@@ then kernel prep routine address
+	.byte <k_prep_00
+	.byte <k_prep_01
 
 jump_table_target_routine_h
-ROUTINE_KERNEL_00 = * - jump_table_target_routine_h	;use this method to create names for manual routine calling
 	.byte >kernel_00
 	.byte >kernel_01
+KERNEL_PREP = * - jump_table_target_routine_h
+	.byte >k_prep_00
+	.byte >k_prep_01
+ROUTINE_B0_R0 = * - jump_table_target_routine_h	;use this method to create names for manual routine calling
+
+
+
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@ Cross Bank Routine Handler @@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -655,28 +658,27 @@ k_prep_xx	;[example] kernels can share prep code when setup is identical but dis
 
 	;each kernel also dispatches a "prep" routine to allow for object pre-positioning
 
-	sta WSYNC			;		direct table position method
-	nop				;2		load index with desired position 0-159
-	ldx #72				;2,4		can be immediate value or from a datastream
-	lda calc_rpfp_table,x		;4,8		load data from .calc_rpfp_table
-	sta HMP0			;3,11		apply to HMxx register
-	and #$0f			;2,13		mask low nybble
-	tax				;2,15		to index register
-loop_position_p0			;
-	dex				;2,17		dex register for loop
-	bpl loop_position_p0		;2,19		on negative fall through
-	sta RESP0			;3,22  		on smallest loop - RESxx register must fall on cycle 22
+	sta WSYNC
+	dec $2d
+	sta $2d
+	lda #DS30DATA
+	sta HMP0
+	ldx #DS30DATA
+loop_poition_p0_k0
+	dex
+	bpl loop_poition_p0_k0
+	sta RESP0
 
 	sta WSYNC
-	ldx test_position		;3		when in need to use a variable
-	lda calc_rpfp_table,x		;4,7
-	sta HMP1			;3,10
-	and #$0f			;2,12
-	tax				;2,14
-loop_position_p1
-	dex				;2,16
-	bpl loop_position_p1		;2,18
-	sta.w RESP1			;4,22		use sta.w to use that extra cycle
+	dec $2d
+	sta $2d
+	lda #DS30DATA
+	sta HMP1
+	ldx #DS30DATA
+loop_poition_p1_k0
+	dex
+	bpl loop_poition_p1_k0
+	sta RESP1
 
 	sta WSYNC
 	sta HMOVE
@@ -688,38 +690,6 @@ loop_position_p1
 ;@@@@@@@@@@@@@@@@@@@@@@@@@ Kernel 00 Prep @@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-;@@@@@@@@@@@@@@@@@@@@@@@@@ Kernel 01 Prep @@@@@@@@@@@@@@@@@@@@@@@@@
-k_prep_01
-
-	ldx test_position		;3		position in index and
-	lda calc_rpfp_table,x		;4		table read must come before the WSYNC
-
-	sta WSYNC
-	sta HMP1			;3
-	and #$0f			;2,5
-	tax				;2,7
-	lda #AMPLITUDE			;2,9		positioning method while using
-	sta AUDV0			;3,12		wave sound
-	sta $2d				;3,15
-loop_position_p1_2			;
-	dex				;2,17
-	bpl loop_position_p1_2		;2,19
-	sta RESP1			;3,22
-
-	sta WSYNC
-	sta HMOVE
-	lda #AMPLITUDE
-	sta AUDV0
-
-	sta WSYNC
-	sta HMCLR
-	lda #AMPLITUDE
-	sta AUDV0
-
-	rts
-;@@@@@@@@@@@@@@@@@@@@@@@@@ Kernel 01 Prep @@@@@@@@@@@@@@@@@@@@@@@@@
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
 	org CURRENT_BANK+$0f00
@@ -727,186 +697,6 @@ loop_position_p1_2			;
 
 
 
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-;@@@@@@@@@@@@@@@@@@@@@@@ Positioning Table @@@@@@@@@@@@@@@@@@@@@@@@
-
-calc_rpfp_table		;RoughPosition/FinePosition table for position method [22]
-	if (_ENABLE_POS_TABLE == 1)
-	.byte %00110000
-	.byte %00100000
-	.byte %00010000
-	.byte %00000000
-	.byte %11110000
-	.byte %11100000
-	.byte %11010000
-	.byte %11000000
-	.byte %10110000
-	.byte %10100000
-	.byte %10010000
-
-	.byte %01110001
-	.byte %01100001
-	.byte %01010001
-	.byte %01000001
-	.byte %00110001
-	.byte %00100001
-	.byte %00010001
-	.byte %00000001
-	.byte %11110001
-	.byte %11100001
-	.byte %11010001
-	.byte %11000001
-	.byte %10110001
-	.byte %10100001
-	.byte %10010001
-
-	.byte %01110010
-	.byte %01100010
-	.byte %01010010
-	.byte %01000010
-	.byte %00110010
-	.byte %00100010
-	.byte %00010010
-	.byte %00000010
-	.byte %11110010
-	.byte %11100010
-	.byte %11010010
-	.byte %11000010
-	.byte %10110010
-	.byte %10100010
-	.byte %10010010
-
-	.byte %01110011
-	.byte %01100011
-	.byte %01010011
-	.byte %01000011
-	.byte %00110011
-	.byte %00100011
-	.byte %00010011
-	.byte %00000011
-	.byte %11110011
-	.byte %11100011
-	.byte %11010011
-	.byte %11000011
-	.byte %10110011
-	.byte %10100011
-	.byte %10010011
-
-	.byte %01110100
-	.byte %01100100
-	.byte %01010100
-	.byte %01000100
-	.byte %00110100
-	.byte %00100100
-	.byte %00010100
-	.byte %00000100
-	.byte %11110100
-	.byte %11100100
-	.byte %11010100
-	.byte %11000100
-	.byte %10110100
-	.byte %10100100
-	.byte %10010100
-
-	.byte %01110101
-	.byte %01100101
-	.byte %01010101
-	.byte %01000101
-	.byte %00110101
-	.byte %00100101
-	.byte %00010101
-	.byte %00000101
-	.byte %11110101
-	.byte %11100101
-	.byte %11010101
-	.byte %11000101
-	.byte %10110101
-	.byte %10100101
-	.byte %10010101
-
-	.byte %01110110
-	.byte %01100110
-	.byte %01010110
-	.byte %01000110
-	.byte %00110110
-	.byte %00100110
-	.byte %00010110
-	.byte %00000110
-	.byte %11110110
-	.byte %11100110
-	.byte %11010110
-	.byte %11000110
-	.byte %10110110
-	.byte %10100110
-	.byte %10010110
-
-	.byte %01110111
-	.byte %01100111
-	.byte %01010111
-	.byte %01000111
-	.byte %00110111
-	.byte %00100111
-	.byte %00010111
-	.byte %00000111
-	.byte %11110111
-	.byte %11100111
-	.byte %11010111
-	.byte %11000111
-	.byte %10110111
-	.byte %10100111
-	.byte %10010111
-
-	.byte %01111000
-	.byte %01101000
-	.byte %01011000
-	.byte %01001000
-	.byte %00111000
-	.byte %00101000
-	.byte %00011000
-	.byte %00001000
-	.byte %11111000
-	.byte %11101000
-	.byte %11011000
-	.byte %11001000
-	.byte %10111000
-	.byte %10101000
-	.byte %10011000
-
-	.byte %01111001
-	.byte %01101001
-	.byte %01011001
-	.byte %01001001
-	.byte %00111001
-	.byte %00101001
-	.byte %00011001
-	.byte %00001001
-	.byte %11111001
-	.byte %11101001
-	.byte %11011001
-	.byte %11001001
-	.byte %10111001
-	.byte %10101001
-	.byte %10011001
-
-	.byte %01111010
-	.byte %01101010
-	.byte %01011010
-	.byte %01001010
-	.byte %00111010
-	.byte %00101010
-	.byte %00011010
-	.byte %00001010
-	.byte %11111010
-	.byte %11101010
-	.byte %11011010
-	.byte %11001010
-	.byte %10111010
-	.byte %10101010
-	.byte %10011010
-
-;@@@@@@@@@@@@@@@@@@@@@@@ Positioning Table @@@@@@@@@@@@@@@@@@@@@@@@
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-	endif
 
 
 

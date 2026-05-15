@@ -11,7 +11,7 @@ void S00_Init(void)
     kernel = KERNEL_TIA_SOUND;
     sound_mode = _SND_MODE_TIA;
 #if (_ENABLE_WAV_SOUND == 1)
-    //      SilenceWaves();
+    SilenceWaves();
 #endif
 }
 
@@ -27,6 +27,14 @@ void S00_VBlank(void)
         RAM[_buffer0 + i] = convertColor(RAM[_buffer0 + i]);
     }
     setPointer(DS0PTR, _buffer0);
+
+    calcPosition(72);
+    RAM[_buffer1] = fine_position;
+    RAM[_buffer1 + 1] = rough_position;
+    calcPosition(80);
+    RAM[_buffer1 + 2] = fine_position;
+    RAM[_buffer1 + 3] = rough_position;
+    setPointer(DS30PTR, _buffer1);
 }
 
 void S00_Over(void)

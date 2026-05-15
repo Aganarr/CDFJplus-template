@@ -10,5 +10,6 @@ output/
 *.elf
 *.map
 *.exe
-*.bat
+
+MSYS.bat
 

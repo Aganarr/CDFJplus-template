@@ -45,8 +45,11 @@ bool save_key_detected = false; // save key present flag
 unsigned char tv_type = _TV_TYPE_60HZ; // code detected TV frequency type
 unsigned char tv_color = NTSC;         // user driven TV color
 
-extern bool genesis_p0 = false; // flag for genesis controller first player
-extern bool genesis_p1 = false; // flag for genesis controller second player
+bool genesis_p0 = false; // flag for genesis controller first player
+bool genesis_p1 = false; // flag for genesis controller second player
+
+unsigned char rough_position = 0; // Position routine calculated RESxx loop value (15 color clock accurate positioning)
+unsigned char fine_position = 0;  // Position routine calculated fine tune value (for HMxx registers)
 
 unsigned char TranslatePalColor[] = {0x00, 0x20, 0x20, 0x40, 0x60, 0x80, 0xA0, 0xC0, 0xD0, 0xB0, 0x90, 0x50, 0x70, 0x30, 0x20, 0x40};
 unsigned char TranslateSecamColor[] = {0x0, 0xE, 0xC, 0x4, 0x4, 0x6, 0x6, 0x2, 0x2, 0x2, 0x8, 0x8, 0x8, 0x8, 0xC, 0xC};
@@ -70,15 +73,6 @@ static void Overscan();
 static void StateChange();
 
 static void HandleControls();
-
-/******************************* External Functions *******************************/
-
-// function defines from ASM_routines.s
-// these use ASM with unrolled loops to make them FAST
-// use/remove as desired
-extern void ClearChannel(void *ptr);
-extern void MemCopy32(void *ptr1, const void *ptr2, unsigned int count);
-extern void Random(unsigned int count);
 
 // ARM Main handler function names
 void (*const VectorMain[])() = {Initialize, VBlank, Overscan};
