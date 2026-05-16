@@ -125,8 +125,6 @@ loop_frame_delay_init			;@
 	endif
 
 
-	lda #80						;only for demonstration of positioning method purposes
-	sta test_position			;
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Game Loop @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -169,7 +167,6 @@ vertsync_std
 
 ;@@@@@@@@@@@@@@@@@@@@
 wait_vblank_end_std
-	sta WSYNC
 	lda INTIM
 	bne wait_vblank_end_std
 	sta VBLANK
@@ -204,7 +201,6 @@ wait_vblank_end_std
 
 ;@@@@@@@@@@@@@@@@@@@@
 wait_overscan_std
-	sta WSYNC
 	lda INTIM	
 	bne wait_overscan_std
 ;@@@@@@@@@@@@@@@@@@@@
@@ -243,7 +239,6 @@ vertsync_samp
 
 ;@@@@@@@@@@@@@@@@@@@@
 wait_vblank_end_samp
-	sta WSYNC
 	lda #AMPLITUDE
 	sta AUDV0
 	lda INTIM
@@ -276,7 +271,6 @@ wait_vblank_end_samp
 
 ;@@@@@@@@@@@@@@@@@@@@
 wait_overscan_samp
-	sta WSYNC
 	lda #AMPLITUDE
 	sta AUDV0
 	lda INTIM	

@@ -88,7 +88,7 @@ _DETECT_FRAME_COUNT		= 1				;can adjust this to however many initial test frames
 VBLANK_TIMER_60			= 43
 OVERSCAN_TIMER_60		= 35
 
-VBLANK_TIMER_50			= 62
+VBLANK_TIMER_50			= 63
 OVERSCAN_TIMER_50		= 75
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -144,7 +144,6 @@ jump_code_RAM_t_r_l			ds 1		;jsr .called_bank_routine								<FRAMEWORK>
 jump_code_RAM_t_r_h			ds 2		;cmp SelectBank0										<FRAMEWORK>
 jump_code_RAM_r_bank		ds 3		;rts													<FRAMEWORK>
 
-test_position				ds 1		;only for demonstration of positioning method purposes
 
 	;Display Remaining RAM
 	echo "---- 2600 RAM", ($100 - *)d, "bytes free" 
