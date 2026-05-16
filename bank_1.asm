@@ -10,16 +10,33 @@ BANK_1
 blank_scanlines_1
 	sta WSYNC
 	dex
-	bne blank_scanlines_1			;can use .blank_scanlines in any bank
+	bne blank_scanlines_1			;can use blank_scanlines in any bank
 	rts
 
 	if (_ENABLE_WAV_SOUND == 1)
-blank_scanlines_aud_1				;can use .blank_scanlines_aud in any bank
+blank_scanlines_aud_1				;can use blank_scanlines_aud in any bank
 	sta WSYNC
 	lda #AMPLITUDE
 	sta AUDV0
 	dex
 	bne blank_scanlines_aud_1
+	rts
+	endif
+
+	if (_ENABLE_POSITIONING == 1)
+position_object_1				;can use position_object in any bank
+	sec
+	sta WSYNC
+divide_by_15_pos_1
+	sbc #15
+	bcs divide_by_15_pos_1
+	eor #7
+	asl
+	asl
+	asl
+	asl
+	sta.w HMP0,x				;have X loaded for 0=p0, 1=p1, 2=m0, 3=m1, 4=bl
+	sta RESP0,x
 	rts
 	endif
 ;@@@@@@@@@@@@@@@@@@@@@ These routines put at beginning of each bank so all have access @@@@@@@@@@@@@@@@@@@@@
@@ -64,19 +81,11 @@ k_prep_01
 loop_position_p0_k1
 	dex								;2,17
 	bpl loop_position_p0_k1			;2,19
-	sta RESP0						;3,22
+	sta RESP0						;3,22	using position data thru ARM routine
 
-	sta WSYNC
-	lda #AMPLITUDE					;2
-	sta AUDV0						;3,5
-	sta $2d							;3,8 - delay code
-	lda #DS30DATA					;2,10
-	sta HMP1						;3,13
-	ldx #DS30DATA					;2,15
-loop_position_p1_k1
-	dex								;2,17
-	bpl loop_position_p1_k1			;2,19
-	sta RESP1						;3,22
+	lda #80
+	ldx #1
+	jsr position_object				;using cross-bank position routine
 
 	sta WSYNC
 	sta HMOVE

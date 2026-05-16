@@ -10,16 +10,33 @@ BANK_0
 blank_scanlines
 	sta WSYNC
 	dex
-	bne blank_scanlines			;can use .blank_scanlines in any bank
+	bne blank_scanlines			;can use blank_scanlines in any bank
 	rts
 
 	if (_ENABLE_WAV_SOUND == 1)
-blank_scanlines_aud				;can use .blank_scanlines_aud in any bank
+blank_scanlines_aud				;can use blank_scanlines_aud in any bank
 	sta WSYNC
 	lda AMPLITUDE
 	sta AUDV0
 	dex
 	bne blank_scanlines_aud
+	rts
+	endif
+
+	if (_ENABLE_POSITIONING == 1)
+position_object					;can use position_object in any bank
+	sec
+	sta WSYNC
+divide_by_15_pos         
+	sbc #15
+	bcs divide_by_15_pos         
+	eor #7
+	asl
+	asl
+	asl
+	asl
+	sta.w HMP0,x				;have X loaded for 0=p0, 1=p1, 2=m0, 3=m1, 4=bl
+	sta RESP0,x
 	rts
 	endif
 ;@@@@@@@@@@@@@@@@@@@@@ These routines put at beginning of each bank so all have access @@@@@@@@@@@@@@@@@@@@@

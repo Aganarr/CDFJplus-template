@@ -160,7 +160,7 @@ void playSample (unsigned short sample_id, unsigned int pitch);
 void playRomSample (unsigned short sample_id, unsigned int pitch);
 
 unsigned char convertColor(unsigned char color);
-
+void setPositions(unsigned short buffer, unsigned short index, unsigned char pos);
 
 
 /******************************* External Functions *******************************/
@@ -171,7 +171,7 @@ unsigned char convertColor(unsigned char color);
 extern void ClearChannel(void *ptr);
 extern void MemCopy32(void *ptr1, const void *ptr2, unsigned int count);
 extern void Random(unsigned int count);
-extern void calcPosition(unsigned char pos);
+extern unsigned short calcPosition(unsigned char pos);
 
 
 /******************************* Shared User Functions *******************************/

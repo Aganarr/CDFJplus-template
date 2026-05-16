@@ -99,7 +99,7 @@ _ENABLE_SAVEKEY			= 1				;saves 306 bytes Atari-side
 _ENABLE_TV_DETECT		= 1
 _ENABLE_WAV_SOUND		= 1				;This includes BOTH DPC+ 3 voice and digital samples requiring #AMPLITUDE; saves ~156 bytes Atari-side, plus sample data
 _ENABLE_TIA_SOUND		= 1				;enable full TIA sound mode using both AUDx0 and AUDx1
-
+_ENABLE_POSITIONING		= 1				;enable per bank object position routines
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@ User Constants

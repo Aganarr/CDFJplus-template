@@ -28,12 +28,8 @@ void S00_VBlank(void)
     }
     setPointer(DS0PTR, _buffer0);
 
-    calcPosition(72);
-    RAM[_buffer1] = fine_position;
-    RAM[_buffer1 + 1] = rough_position;
-    calcPosition(80);
-    RAM[_buffer1 + 2] = fine_position;
-    RAM[_buffer1 + 3] = rough_position;
+    setPositions(_buffer1, 0, 72);
+    setPositions(_buffer1, 1, 80);
     setPointer(DS30PTR, _buffer1);
 }
 

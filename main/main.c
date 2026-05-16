@@ -384,3 +384,9 @@ unsigned char convertColor(unsigned char color)
 
     return color;
 }
+
+/******************************* Object Position Data Into Buffer *******************************/
+void setPositions(unsigned short buffer, unsigned short index, unsigned char pos)
+{
+    RAM_2B[(buffer / 2) + index] = calcPosition(pos);
+}
