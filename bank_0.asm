@@ -7,19 +7,16 @@ BANK_0
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@ These routines put at beginning of each bank so all have access @@@@@@@@@@@@@@@@@@@@@
-blank_scanlines
+	if (_ENABLE_BLANKLINES == 1)
+blank_scanlines					;can use blank_scanlines in any bank
 	sta WSYNC
-	dex
-	bne blank_scanlines			;can use blank_scanlines in any bank
-	rts
-
-	if (_ENABLE_WAV_SOUND == 1)
-blank_scanlines_aud				;can use blank_scanlines_aud in any bank
-	sta WSYNC
-	lda AMPLITUDE
+	lda sound_mode
+	bne skip_blankline_wav
+	lda #AMPLITUDE
 	sta AUDV0
+skip_blankline_wav
 	dex
-	bne blank_scanlines_aud
+	bne blank_scanlines
 	rts
 	endif
 
@@ -27,7 +24,7 @@ blank_scanlines_aud				;can use blank_scanlines_aud in any bank
 position_object					;can use position_object in any bank
 	sec
 	sta WSYNC
-divide_by_15_pos         
+divide_by_15_pos				;A loaded with position
 	sbc #15
 	bcs divide_by_15_pos         
 	eor #7
@@ -38,7 +35,48 @@ divide_by_15_pos
 	sta.w HMP0,x				;have X loaded for 0=p0, 1=p1, 2=m0, 3=m1, 4=bl
 	sta RESP0,x
 	rts
+
+apply_HMOVE						;can use apply_HMOVE in any bank
+	sta WSYNC
+	sta HMOVE
+	ldy sound_mode
+	bne skip_HMOVE_wav
+	lda #AMPLITUDE
+	sta AUDV0
+skip_HMOVE_wav
+	sta WSYNC
+	sta HMCLR
+	tya
+	bne skip_HMCLR_wav
+	lda #AMPLITUDE
+	sta AUDV0
+skip_HMCLR_wav
+	rts
 	endif
+
+do_vblank						;can use do_vblank in any bank
+	lda sound_mode
+	beq skip_vblank_wav_sound
+	lda #AMPLITUDE
+	sta AUDV0
+skip_vblank_wav_sound
+	lda INTIM
+	bne do_vblank
+	sta VBLANK
+	rts
+
+do_overscan						;can use do_overscan in any bank
+	ldx #2
+	stx WSYNC
+	stx VBLANK
+	lda sound_mode
+	beq skip_overscan_wav_sound
+	lda #AMPLITUDE
+	sta AUDV0
+skip_overscan_wav_sound
+	lda overscan_timer
+	sta TIM64T
+	rts
 ;@@@@@@@@@@@@@@@@@@@@@ These routines put at beginning of each bank so all have access @@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
@@ -124,13 +162,17 @@ loop_frame_delay_init			;@
 	sta tv_type					;@
 	endif
 
+	ldx tv_type
+	lda vblank_table,x
+	sta vblank_timer
+	lda overscan_table,x
+	sta overscan_timer
 
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Game Loop @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Game Loop @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 main_game_loop
 
-	if (_ENABLE_WAV_SOUND == 1)
 	lda sound_mode				; compare this frame's sound mode
 	cmp sound_save				; to last frame's
 	beq skip_change_modes		;
@@ -141,210 +183,47 @@ main_game_loop
 	lda call_fn_table,x			;
 	sta call_fn					;
 skip_change_modes				;
-	tax							; branch to proper frame handler
-	bne main_game_loop_sampled	; standard TIA or sampled sound
-	endif
 
-	if (_ENABLE_TIA_SOUND == 1) || ((_ENABLE_TIA_SOUND == 0) && (_ENABLE_WAV_SOUND == 0))	;safety net in case BOTH get set to 0
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Game Loop - Standard Sounds @@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-main_game_loop_standard
-
-;@@@@@@@@@@@@@@@@@@@@
-	lda #%1110
-vertsync_std
-	sta WSYNC
-	sta VSYNC
-	lsr 
-	bne vertsync_std
-	
-	ldx tv_type
-	lda vblank_table,x
-	sta TIM64T
-;@@@@@@@@@@@@@@@@@@@@
-
-	jsr vblank_ARM
-
-;@@@@@@@@@@@@@@@@@@@@
-wait_vblank_end_std
-	lda INTIM
-	bne wait_vblank_end_std
-	sta VBLANK
-;@@@@@@@@@@@@@@@@@@@@
-
-	ldx kernel
-	jsr call_bank_routine
-
-;@@@@@@@@@@@@@@@@@@@@
-	lda #2
-	sta WSYNC
-	sta VBLANK
-	ldx tv_type
-	lda overscan_table,x
-	sta TIM64T
-;@@@@@@@@@@@@@@@@@@@@
-
-	jsr overscan_ARM
-
-	lda audc0
-	sta AUDC0
-	lda audf0
-	sta AUDF0
-	lda audv0
-	sta AUDV0
-	lda audc1
-	sta AUDC1
-	lda audf1
-	sta AUDF1
-	lda audv1
-	sta AUDV1
-
-;@@@@@@@@@@@@@@@@@@@@
-wait_overscan_std
-	lda INTIM	
-	bne wait_overscan_std
-;@@@@@@@@@@@@@@@@@@@@
-
-	jmp main_game_loop
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Game Loop - Standard Sounds @@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-	endif
-
-	if (_ENABLE_WAV_SOUND == 1)
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Game Loop - Sampled Sounds @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-main_game_loop_sampled
 
 ;@@@@@@@@@@@@@@@@@@@@
 	ldx #2
 	ldy #3
-vertsync_samp
+vertsync
 	stx WSYNC
 	stx VSYNC
+	lda sound_mode
+	bne skip_vsync_wav
 	lda #AMPLITUDE
 	sta AUDV0
+skip_vsync_wav
 	dey
-	bne vertsync_samp
+	bne vertsync
 	sty WSYNC
 	sty VSYNC
+	lda sound_mode
+	beq skip_vblank_wav
 	lda #AMPLITUDE
 	sta AUDV0
-	
-	ldx tv_type
-	lda vblank_table,x
+skip_vblank_wav
+
+	lda vblank_timer
 	sta TIM64T
 ;@@@@@@@@@@@@@@@@@@@@
-
-	jsr vblank_ARM
-
-;@@@@@@@@@@@@@@@@@@@@
-wait_vblank_end_samp
-	lda #AMPLITUDE
-	sta AUDV0
-	lda INTIM
-	bne wait_vblank_end_samp
-	sta VBLANK
-;@@@@@@@@@@@@@@@@@@@@
-
-	ldx kernel
-	jsr call_bank_routine
-
-;@@@@@@@@@@@@@@@@@@@@
-	ldx #2
-	stx WSYNC
-	stx VBLANK
-	lda #AMPLITUDE
-	sta AUDV0
-	ldx tv_type
-	lda overscan_table,x
-	sta TIM64T
-;@@@@@@@@@@@@@@@@@@@@
-
-	jsr overscan_ARM
-
-	lda audc1
-	sta AUDC1
-	lda audf1
-	sta AUDF1
-	lda audv1
-	sta AUDV1
-
-;@@@@@@@@@@@@@@@@@@@@
-wait_overscan_samp
-	lda #AMPLITUDE
-	sta AUDV0
-	lda INTIM	
-	bne wait_overscan_samp
-;@@@@@@@@@@@@@@@@@@@@
-
-	jmp main_game_loop
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Game Loop - Sampled Sounds @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-;@@@@@@@@@@@@ Tables for Frame Dispatch @@@@@@@@@@@@
-
-sound_mode_table					;for auto-adjust to SETMODE mirror
-	.byte #$00
-	.byte #$f0
-	.byte #$00
-
-call_fn_table						;for auto-adjust to call_fn mirror
-	.byte #$ff
-	.byte #$fe
-	.byte #$fe
-
-;@@@@@@@@@@@@ Tables for Frame Dispatch @@@@@@@@@@@@
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-	endif
-
-
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-;@@@@@@@@@@@@@ Tables for VBlank Areas @@@@@@@@@@@@@
-
-vblank_table
-	.byte VBLANK_TIMER_60
-	.byte VBLANK_TIMER_50
-overscan_table
-	.byte OVERSCAN_TIMER_60
-	.byte OVERSCAN_TIMER_50
-
-;@@@@@@@@@@@@@ Tables for VBlank Areas @@@@@@@@@@@@@
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-
-
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@ Handle VBlank ARM Call @@@@@@@@@@@@@@@@@@@@@@@@@@@
-vblank_ARM
-
 
 	ldx #<_C_routine
 	stx DSPTR
 	stx DSPTR
 	ldx #_ARM_VBLANK				;let ARM know we are in VBlank
 	stx DSWRITE
-
 	ldx call_fn
 	stx CALLFN
 
-	lda kernel
-	clc
-	adc KERNEL_PREP
-	tax
-	jmp call_bank_routine			;after ARM VBlank dispatch kernel's prep routine
 
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@ Handle VBlank ARM Call @@@@@@@@@@@@@@@@@@@@@@@@@@@
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+	ldx kernel
+	jsr call_bank_routine
 
 
-
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-;@@@@@@@@@@@@@@@@@@@@@@@@@@ Handle Overscan ARM Call @@@@@@@@@@@@@@@@@@@@@@@@@@
-overscan_ARM
-
-	ldx #<_C_routine
+	ldx #<_C_routine				;C_routine at location $0000
 	stx COLUBK						;clear color registers while X = 0
 	stx COLUP0
 	stx COLUP1
@@ -378,18 +257,22 @@ overscan_ARM
 	sta kernel						;kernel and sound_mode get refreshed
 	lda #DS31DATA					;from the ARM each frame
 	sta sound_mode
+	tay
 	lda #DS31DATA
-	sta audv0
+	sta AUDV1
 	lda #DS31DATA
-	sta audc0
+	sta AUDC1
 	lda #DS31DATA
-	sta audf0
+	sta AUDF1
+	tya
+	bne skip_audio_ch0
 	lda #DS31DATA
-	sta audv1
+	sta AUDV0
 	lda #DS31DATA
-	sta audc1
+	sta AUDC0
 	lda #DS31DATA
-	sta audf1
+	sta AUDF0
+skip_audio_ch0
 
 
 	if (_ENABLE_SAVEKEY == 1)
@@ -458,13 +341,55 @@ acknowledge_save_command
 	ldy #<_save_command				;<SaveKey>
 	sty DSPTR						;<SaveKey>
 	stx DSWRITE						;<SaveKey> block of code
+skip_save_key_operation
 	endif
 
 
-skip_save_key_operation
-	rts
-;@@@@@@@@@@@@@@@@@@@@@@@@@@ Handle Overscan ARM Call @@@@@@@@@@@@@@@@@@@@@@@@@@
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+;@@@@@@@@@@@@@@@@@@@@
+wait_overscan
+	lda sound_mode
+	bne skip_wait_overscan_wav
+	lda #AMPLITUDE
+	sta AUDV0
+skip_wait_overscan_wav
+	lda INTIM	
+	bne wait_overscan
+;@@@@@@@@@@@@@@@@@@@@
+
+	jmp main_game_loop
+;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Game Loop @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
+;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+;@@@@@@@@@@@@ Tables for Frame Dispatch @@@@@@@@@@@@
+
+sound_mode_table					;for auto-adjust to SETMODE mirror
+	.byte #$00
+	.byte #$f0
+	.byte #$00
+
+call_fn_table						;for auto-adjust to call_fn mirror
+	.byte #$ff
+	.byte #$fe
+	.byte #$fe
+
+;@@@@@@@@@@@@ Tables for Frame Dispatch @@@@@@@@@@@@
+;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
+;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+;@@@@@@@@@@@@@ Tables for VBlank Areas @@@@@@@@@@@@@
+
+vblank_table
+	.byte VBLANK_TIMER_60
+	.byte VBLANK_TIMER_50
+overscan_table
+	.byte OVERSCAN_TIMER_60
+	.byte OVERSCAN_TIMER_50
+
+;@@@@@@@@@@@@@ Tables for VBlank Areas @@@@@@@@@@@@@
+;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
 
@@ -482,26 +407,18 @@ call_bank_routine_sans_bank
 ;@@@@@@@@@@@@@@@@@@@@
 
 jump_table_target_bank			;routines can be located anywhere on any bank
-;@@@@@ first banks for kernels (we want to be able to call these ASAP without math to kernel variable)
 	.byte <BANK1
 	.byte <BANK1
-;@@@@@ then kernel prep routine bank
-	.byte <BANK0
-	.byte <BANK1
+
 
 jump_table_target_routine_l		;each routine gets an entry in the table set
 	.byte <kernel_00
 	.byte <kernel_01
-;@@@@@ then kernel prep routine address
-	.byte <k_prep_00
-	.byte <k_prep_01
+
 
 jump_table_target_routine_h
 	.byte >kernel_00
 	.byte >kernel_01
-KERNEL_PREP = * - jump_table_target_routine_h
-	.byte >k_prep_00
-	.byte >k_prep_01
 ROUTINE_B0_R0 = * - jump_table_target_routine_h	;use this method to create names for manual routine calling
 
 
@@ -664,40 +581,40 @@ _sample_steel_size = * - _sample_steel
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@ Kernel 00 Prep @@@@@@@@@@@@@@@@@@@@@@@@@
-k_prep_00
-k_prep_xx	;[example] kernels can share prep code when setup is identical but display handling differs
-
-	;each kernel also dispatches a "prep" routine to allow for object pre-positioning
-
-	sta WSYNC
-	dec $2d
-	sta $2d
-	lda #DS30DATA
-	sta HMP0
-	ldx #DS30DATA
-loop_poition_p0_k0
-	dex
-	bpl loop_poition_p0_k0
-	sta RESP0
-
-	sta WSYNC
-	dec $2d
-	sta $2d
-	lda #DS30DATA
-	sta HMP1
-	ldx #DS30DATA
-loop_poition_p1_k0
-	dex
-	bpl loop_poition_p1_k0
-	sta RESP1
-
-	sta WSYNC
-	sta HMOVE
-
-	sta WSYNC
-	sta HMCLR
-
-	rts
+;k_prep_00
+;k_prep_xx	;[example] kernels can share prep code when setup is identical but display handling differs
+;
+;	;each kernel also dispatches a "prep" routine to allow for object pre-positioning
+;
+;	sta WSYNC
+;	dec $2d
+;	sta $2d
+;	lda #DS30DATA
+;	sta HMP0
+;	ldx #DS30DATA
+;loop_poition_p0_k0
+;	dex
+;	bpl loop_poition_p0_k0
+;	sta RESP0
+;
+;	sta WSYNC
+;	dec $2d
+;	sta $2d
+;	lda #DS30DATA
+;	sta HMP1
+;	ldx #DS30DATA
+;loop_poition_p1_k0
+;	dex
+;	bpl loop_poition_p1_k0
+;	sta RESP1
+;
+;	sta WSYNC
+;	sta HMOVE
+;
+;	sta WSYNC
+;	sta HMCLR
+;
+;	rts
 ;@@@@@@@@@@@@@@@@@@@@@@@@@ Kernel 00 Prep @@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 

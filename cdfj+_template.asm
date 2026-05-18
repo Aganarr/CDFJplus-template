@@ -98,8 +98,10 @@ OVERSCAN_TIMER_50		= 75
 _ENABLE_SAVEKEY			= 1				;saves 306 bytes Atari-side
 _ENABLE_TV_DETECT		= 1
 _ENABLE_WAV_SOUND		= 1				;This includes BOTH DPC+ 3 voice and digital samples requiring #AMPLITUDE; saves ~156 bytes Atari-side, plus sample data
-_ENABLE_TIA_SOUND		= 1				;enable full TIA sound mode using both AUDx0 and AUDx1
+;_ENABLE_TIA_SOUND		= 1				;enable full TIA sound mode using both AUDx0 and AUDx1
 _ENABLE_POSITIONING		= 1				;enable per bank object position routines
+_ENABLE_BLANKLINES		= 0				;enable blank scanline routine
+
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@ User Constants
@@ -121,12 +123,15 @@ sound_mode					ds 1		;<FRAMEWORK>
 sound_save					ds 1		;<FRAMEWORK>
 call_fn						ds 1		;<FRAMEWORK>
 
-audv0						ds 1		;<FRAMEWORK>
-audc0						ds 1		;<FRAMEWORK>
-audf0						ds 1		;<FRAMEWORK>
-audv1						ds 1		;<FRAMEWORK>
-audc1						ds 1		;<FRAMEWORK>
-audf1						ds 1		;<FRAMEWORK>
+vblank_timer				ds 1		;<FRAMEWORK>
+overscan_timer				ds 1		;<FRAMEWORK>
+
+;audv0						ds 1		;<FRAMEWORK>
+;audc0						ds 1		;<FRAMEWORK>
+;audf0						ds 1		;<FRAMEWORK>
+;audv1						ds 1		;<FRAMEWORK>
+;audc1						ds 1		;<FRAMEWORK>
+;audf1						ds 1		;<FRAMEWORK>
 
 	if (_ENABLE_SAVEKEY == 1)
 sk_command					ds 1		;<SaveKey>	holds current command from ARM
@@ -170,12 +175,12 @@ _SK_DETECT					ds 1			; <SaveKey>
 
 _kernel						ds 1			; <FRAMEWORK>
 _sound_mode					ds 1			; <FRAMEWORK>
-_AUDV0						ds 1			; <FRAMEWORK>
-_AUDC0						ds 1			; <FRAMEWORK>
-_AUDF0						ds 1			; <FRAMEWORK>
 _AUDV1						ds 1			; <FRAMEWORK>
 _AUDC1						ds 1			; <FRAMEWORK>
 _AUDF1						ds 1			; <FRAMEWORK>
+_AUDV0						ds 1			; <FRAMEWORK>
+_AUDC0						ds 1			; <FRAMEWORK>
+_AUDF0						ds 1			; <FRAMEWORK>
 
 	if (_ENABLE_SAVEKEY == 1)
 _save_command				ds 1			; <SaveKey>

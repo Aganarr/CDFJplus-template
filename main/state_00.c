@@ -28,9 +28,9 @@ void S00_VBlank(void)
     }
     setPointer(DS0PTR, _buffer0);
 
-    setPositions(_buffer1, 0, 72);
-    setPositions(_buffer1, 1, 80);
-    setPointer(DS30PTR, _buffer1);
+    // setPositions(_buffer1, 0, 72);
+    // setPositions(_buffer1, 1, 80);
+    // setPointer(DS30PTR, _buffer1);
 }
 
 void S00_Over(void)

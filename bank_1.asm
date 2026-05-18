@@ -7,19 +7,16 @@ BANK_1
 
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@ These routines put at beginning of each bank so all have access @@@@@@@@@@@@@@@@@@@@@
-blank_scanlines_1
+	if (_ENABLE_BLANKLINES == 1)
+blank_scanlines_1				;can use blank_scanlines in any bank
 	sta WSYNC
-	dex
-	bne blank_scanlines_1			;can use blank_scanlines in any bank
-	rts
-
-	if (_ENABLE_WAV_SOUND == 1)
-blank_scanlines_aud_1				;can use blank_scanlines_aud in any bank
-	sta WSYNC
+	lda sound_mode
+	bne skip_blankline_wav_1
 	lda #AMPLITUDE
 	sta AUDV0
+skip_blankline_wav_1
 	dex
-	bne blank_scanlines_aud_1
+	bne blank_scanlines_1
 	rts
 	endif
 
@@ -27,7 +24,7 @@ blank_scanlines_aud_1				;can use blank_scanlines_aud in any bank
 position_object_1				;can use position_object in any bank
 	sec
 	sta WSYNC
-divide_by_15_pos_1
+divide_by_15_pos_1				;A loaded with position
 	sbc #15
 	bcs divide_by_15_pos_1
 	eor #7
@@ -38,7 +35,48 @@ divide_by_15_pos_1
 	sta.w HMP0,x				;have X loaded for 0=p0, 1=p1, 2=m0, 3=m1, 4=bl
 	sta RESP0,x
 	rts
+
+apply_HMOVE_1					;can use apply_HMOVE in any bank
+	sta WSYNC
+	sta HMOVE
+	ldy sound_mode
+	bne skip_HMOVE_wav_1
+	lda #AMPLITUDE
+	sta AUDV0
+skip_HMOVE_wav_1
+	sta WSYNC
+	sta HMCLR
+	tya
+	bne skip_HMCLR_wav_1
+	lda #AMPLITUDE
+	sta AUDV0
+skip_HMCLR_wav_1
+	rts
 	endif
+
+do_vblank_1						;can use do_vblank in any bank
+	lda sound_mode
+	beq skip_vblank_wav_sound_1
+	lda #AMPLITUDE
+	sta AUDV0
+skip_vblank_wav_sound_1
+	lda INTIM
+	bne do_vblank
+	sta VBLANK
+	rts
+
+do_overscan_1					;can use do_overscan in any bank
+	ldx #2
+	stx WSYNC
+	stx VBLANK
+	lda sound_mode
+	beq skip_overscan_wav_sound_1
+	lda #AMPLITUDE
+	sta AUDV0
+skip_overscan_wav_sound_1
+	lda overscan_timer
+	sta TIM64T
+	rts
 ;@@@@@@@@@@@@@@@@@@@@@ These routines put at beginning of each bank so all have access @@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
@@ -46,6 +84,18 @@ divide_by_15_pos_1
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Kernel 00 Routine @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 kernel_00
+
+	lda #72
+	ldx #0							;index 0 = p0 object
+	jsr position_object				;using cross-bank position routine
+
+	lda #80
+	ldx #1							;index 0 = p1 object
+	jsr position_object				;using cross-bank position routine
+
+	jsr apply_HMOVE
+
+	jsr do_vblank
 
 	ldx #192
 kernel_00_loop				;kernel_00 shows a "standard" display loop
@@ -63,50 +113,25 @@ kernel_00_loop				;kernel_00 shows a "standard" display loop
 	dex
 	bne kernel_00_loop
 
+	jsr do_overscan
+
+
 	rts
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Kernel 00 Routine @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-;@@@@@@@@@@@@@@@@@@@@@@@@@ Kernel 01 Prep @@@@@@@@@@@@@@@@@@@@@@@@@
-k_prep_01
-
-	sta WSYNC
-	lda #AMPLITUDE					;2
-	sta AUDV0						;3,5
-	sta $2d							;3,8 - delay code
-	lda #DS30DATA					;2,10
-	sta HMP0						;3,13
-	ldx #DS30DATA					;2,15
-loop_position_p0_k1
-	dex								;2,17
-	bpl loop_position_p0_k1			;2,19
-	sta RESP0						;3,22	using position data thru ARM routine
-
-	lda #80
-	ldx #1
-	jsr position_object				;using cross-bank position routine
-
-	sta WSYNC
-	sta HMOVE
-
-	sta WSYNC
-	sta HMCLR
-
-	rts
-;@@@@@@@@@@@@@@@@@@@@@@@@@ Kernel 01 Prep @@@@@@@@@@@@@@@@@@@@@@@@@
-;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Kernel 01 Routine @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 kernel_01
+
+	jsr do_vblank
 
 _kernel_01_loop				;kernel_01 demontrates the FastJump streams
 	sta WSYNC
 
 	if (_ENABLE_WAV_SOUND == 1)
 	lda #AMPLITUDE
-	sta AUDV0			;as well as handling wave samples
+	sta AUDV0				;as well as handling wave samples
 	tay
 	endif
 
@@ -120,6 +145,9 @@ _kernel_01_loop				;kernel_01 demontrates the FastJump streams
 
 	jmp FASTJMP1
 _kernel_01_done
+
+
+	jsr do_overscan
 
 	rts
 ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Kernel 01 Routine @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
